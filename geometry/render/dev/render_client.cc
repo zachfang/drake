@@ -356,6 +356,7 @@ std::string RenderClient::RenderOnServer(
     const RenderCameraCore& camera_core, RenderImageType image_type,
     const std::string& scene_path, const std::optional<std::string>& mime_type,
     double min_depth, double max_depth) const {
+  drake::log()->info("[04] Entering RenderOnServer()");
   if (image_type == RenderImageType::kDepthDepth32F)
     ValidDepthRangeOrThrow(min_depth, max_depth);
 
@@ -460,7 +461,9 @@ std::string RenderClient::RenderOnServer(
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &bin_out);
 
   // Perform the POST and drake::log() prior to any potential exceptions.
+  drake::log()->info("[05] Performing to curl");
   result = curl_easy_perform(curl);
+  drake::log()->info("[09] Finishing curling");
   if (verbose_) {
     LogCurlDebugData(debug_data);
   }
@@ -527,12 +530,14 @@ std::string RenderClient::RenderOnServer(
 
   vtkNew<vtkPNGReader> png_reader;
   if (png_reader->CanReadFile(bin_out_path.c_str())) {
+    drake::log()->info("[10] Exiting RenderOnServer()");
     return RenameFileExtension(bin_out_path, ".png");
   }
   image_types_tried += "PNG";
 
   vtkNew<vtkTIFFReader> tiff_reader;
   if (tiff_reader->CanReadFile(bin_out_path.c_str())) {
+    drake::log()->info("[10] Exiting RenderOnServer()");
     return RenameFileExtension(bin_out_path, ".tiff");
   }
   image_types_tried += ", TIFF";

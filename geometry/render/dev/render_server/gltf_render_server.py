@@ -61,6 +61,7 @@ import subprocess
 import sys
 import tempfile
 from textwrap import dedent
+import time
 from typing import Dict, Union, Tuple, TYPE_CHECKING
 
 from flask import Flask, send_file
@@ -352,7 +353,7 @@ class RenderRequest:
     ``GET`` listing of expected entries in the ``<form>``
     """
 
-    def __init__(self, flask_request: request, log_to_console: bool = True):
+    def __init__(self, flask_request: request, log_to_console: bool = False):
         self.request = flask_request
         self.log_to_console = log_to_console
 
@@ -650,6 +651,8 @@ def render_callback(render_request: RenderRequest) -> Union[Path, str]:
             the client.  Any other exceptions raised will result in an internal
             server error response message to the client.
     """
+    request_time = time.time()
+    print(f"[{request_time:10.3f}] [console] [info] [06] Receiving render request")
     # NOTE: the path to `vtk_render_server_backend` is only valid from bazel.
     # The path to the renderer executable to call.
     backend = str(
@@ -713,6 +716,8 @@ def render_callback(render_request: RenderRequest) -> Union[Path, str]:
 
     # Call the render backend, including capturing any errors.
     try:
+        start_time = time.time()
+        print(f"[{start_time:10.3f}] [console] [info] [07] Starting backend process")
         proc = subprocess.run(proc_args, capture_output=True)
         # Using subprocess.check_call will not provide any additional
         # information if the renderer produces output on stdout or stderr.
@@ -725,8 +730,9 @@ def render_callback(render_request: RenderRequest) -> Union[Path, str]:
             if stderr:
                 message += f"\nstderr:\n{stderr}"
             raise RuntimeError(message)
-
+        finish_time = time.time()
         # Inform the calling method where the final rendering resides.
+        print(f"[{finish_time:10.3f}] [console] [info] [08] Finishing backend process")
         return output_path
     except Exception as e:
         raise RenderError(f"Failed render invocation: {e}", code=500)

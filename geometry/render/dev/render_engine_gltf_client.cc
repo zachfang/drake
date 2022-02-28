@@ -143,7 +143,9 @@ RenderEngineGltfClient::RenderEngineGltfClient(
                        // though it's value is irrelevant for this renderer.
                        {204 / 255., 229 / 255., 255 / 255.}}),
       RenderClient(parameters.url, parameters.port, parameters.render_endpoint,
-                   parameters.verbose, parameters.no_cleanup) {}
+                   parameters.verbose, parameters.no_cleanup) {
+  drake::logging::set_log_pattern("[%E.%e] [%n] [%l] %v");
+}
 
 RenderEngineGltfClient::RenderEngineGltfClient(
     const RenderEngineGltfClient& other)
@@ -213,6 +215,8 @@ void RenderEngineGltfClient::UpdateViewpoint(
 
 void RenderEngineGltfClient::DoRenderColorImage(
     const ColorRenderCamera& camera, ImageRgba8U* color_image_out) const {
+  drake::log()->info("");
+  drake::log()->info("[01] Entering DoRenderColorImage()");
   const auto color_scene_id = GetNextSceneId();
   if (verbose()) {
     LogFrameStart(internal::ImageType::kColor, color_scene_id);
@@ -243,10 +247,14 @@ void RenderEngineGltfClient::DoRenderColorImage(
   // Load the returned image back to the drake buffer.
   LoadColorImage(image_path, color_image_out);
   if (!no_cleanup()) CleanupFrame(scene_path, image_path);
+  drake::log()->info("[11] Exiting DoRenderColorImage()");
+  drake::log()->info("");
 }
 
 void RenderEngineGltfClient::DoRenderDepthImage(
     const DepthRenderCamera& camera, ImageDepth32F* depth_image_out) const {
+  drake::log()->info("");
+  drake::log()->info("[01] Entering DoRenderDepthImage()");
   const auto depth_scene_id = GetNextSceneId();
   if (verbose()) {
     LogFrameStart(internal::ImageType::kDepth, depth_scene_id);
@@ -278,10 +286,14 @@ void RenderEngineGltfClient::DoRenderDepthImage(
   // Load the returned image back to the drake buffer.
   LoadDepthImage(image_path, depth_image_out);
   if (!no_cleanup()) CleanupFrame(scene_path, image_path);
+  drake::log()->info("[11] Exiting DoRenderDepthImage()");
+  drake::log()->info("");
 }
 
 void RenderEngineGltfClient::DoRenderLabelImage(
     const ColorRenderCamera& camera, ImageLabel16I* label_image_out) const {
+  drake::log()->info("");
+  drake::log()->info("[01] Entering DoRenderLabelImage()");
   const auto label_scene_id = GetNextSceneId();
   if (verbose()) {
     LogFrameStart(internal::ImageType::kLabel, label_scene_id);
@@ -312,6 +324,8 @@ void RenderEngineGltfClient::DoRenderLabelImage(
   // Load the returned image back to the drake buffer.
   LoadLabelImage(image_path, label_image_out);
   if (!no_cleanup()) CleanupFrame(scene_path, image_path);
+  drake::log()->info("[11] Exiting DoRenderLabelImage()");
+  drake::log()->info("");
 }
 
 std::string RenderEngineGltfClient::ExportPathFor(
@@ -326,12 +340,14 @@ std::string RenderEngineGltfClient::ExportPathFor(
 
 std::string RenderEngineGltfClient::ExportScene(internal::ImageType image_type,
                                                 int64_t scene_id) const {
+  drake::log()->info("[02] Entering ExportScene() for {} image", ImageTypeToString(image_type));
   vtkNew<vtkGLTFExporter> gltf_exporter;
   gltf_exporter->InlineDataOn();
   gltf_exporter->SetRenderWindow(pipelines_[image_type]->window);
   const std::string scene_path = ExportPathFor(image_type, scene_id);
   gltf_exporter->SetFileName(scene_path.c_str());
   gltf_exporter->Write();
+  drake::log()->info("[03] Exiting ExportScene() for {} image", ImageTypeToString(image_type));
   return scene_path;
 }
 
