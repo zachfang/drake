@@ -25,6 +25,7 @@ drake_cc_binary(
     add_test_rule = 1,
     data = [
         ":example_resources",
+        "//manipulation/models/iiwa_description:models",
         "//manipulation/models/ycb:models",
     ],
     test_rule_args = [

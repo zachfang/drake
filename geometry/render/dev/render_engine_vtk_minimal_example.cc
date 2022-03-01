@@ -17,6 +17,7 @@
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
+#include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 #include "drake/systems/sensors/image_writer.h"
@@ -40,7 +41,7 @@ DEFINE_double(render_fps, 10, "Frames per simulation second to render");
    Diffuse: "0.0, 0.0, 0.0, 1.57, 3.14, 0.0"
    Textured: "0.0, 0.0, 0.0, -1.57, 0.0, 0.0"
  */
-DEFINE_string(camera_xyz_rpy, "0.8, 0.0, 0.5, -2.2, 0.0, 1.57",
+DEFINE_string(camera_xyz_rpy, "2.0, 0.0, 1.00, -1.8, 0.0, 1.57",
     "Sets the camera pose by xyz (meters) and rpy (radians) values.");
 DEFINE_string(save_dir, "",
     "If specified, the rendered images will be saved to this directory.");
@@ -105,6 +106,7 @@ using multibody::MultibodyPlant;
 using multibody::Parser;
 using systems::Context;
 using systems::InputPort;
+using systems::ConstantVectorSource;
 using systems::sensors::ImageDepth32F;
 using systems::sensors::ImageLabel16I;
 using systems::sensors::ImageRgba8U;
@@ -295,6 +297,29 @@ int do_main() {
           "drake/manipulation/models/ycb/sdf/006_mustard_bottle.sdf"),
       "mustard_bottle");
 
+  const auto iiwa_file = FindResourceOrThrow(
+   "drake/manipulation/models/iiwa_description/sdf/"
+   "iiwa14_no_collision.sdf"
+  );
+  const auto kuka_arm_left = parser.AddModelFromFile(
+      iiwa_file, "kuka_arm_left");
+  const RigidTransformd X_WKukaLeft(
+      RollPitchYawd{0, 0, 0}, Vector3d(-0.5, 0.3, 0));
+  plant->WeldFrames(
+    plant->world_frame(),
+    plant->GetFrameByName("iiwa_link_0", kuka_arm_left),
+    X_WKukaLeft
+  );
+  const auto kuka_arm_right = parser.AddModelFromFile(
+      iiwa_file, "kuka_arm_right");
+  const RigidTransformd X_WKukaRight(
+      RollPitchYawd{0, 0, 0}, Vector3d(-0.5, -0.3, 0));
+  plant->WeldFrames(
+    plant->world_frame(),
+    plant->GetFrameByName("iiwa_link_0", kuka_arm_right),
+    X_WKukaRight
+  );
+
   DrakeLcm lcm;
   DrakeVisualizerd::AddToBuilder(&builder, *scene_graph, &lcm);
   if (FLAGS_render_on) {
@@ -390,6 +415,18 @@ int do_main() {
   }
 
   plant->Finalize();
+
+  auto u1_source = builder.AddSystem<ConstantVectorSource<double>>(
+      VectorX<double>::Constant(plant->num_velocities(kuka_arm_left), 0.1));
+      //VectorX<double>::Zero(plant->num_velocities(kuka_arm_left)));
+  auto u2_source = builder.AddSystem<ConstantVectorSource<double>>(
+      VectorX<double>::Constant(plant->num_velocities(kuka_arm_right), 0.1));
+      //VectorX<double>::Zero(plant->num_velocities(kuka_arm_right)));
+  builder.Connect(u1_source->get_output_port(),
+                  plant->get_actuation_input_port(kuka_arm_left));
+  builder.Connect(u2_source->get_output_port(),
+                  plant->get_actuation_input_port(kuka_arm_right));
+
   auto diagram = builder.Build();
 
   systems::Simulator<double> simulator(*diagram);
