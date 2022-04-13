@@ -48,15 +48,15 @@ struct HttpResponse {
    whether or not the underlying HttpService marked it for failure via
    HttpResponse::service_error.  Note that if a server has not been
    properly implemented, it may always return `200` even if the response text
-   indicates failure.  This is an error with the server, there is nothing this
-   framework can do to validate such a scenario. */
+   indicates failure.  This is an error with the server, and there is nothing
+   this framework can do to validate such a scenario. */
   bool Good() const {
     return !service_error && (http_code >= 200 && http_code < 400);
   }
 };
 
-/* An HTTP service API, used by a RenderClient to facilitate server
- communications.  This class is not intended to be used on its own, it is a
+/* An HTTP service API, used by a RenderClient, to facilitate server
+ communications.  This class is not intended to be used on its own. It is a
  helper class to perform server communications, but does not have any specific
  knowledge of a given client-server API.  The owning entity, such as
  RenderClient, is responsible for adhering to the server API. */
@@ -77,9 +77,9 @@ class HttpService {
    an %HttpService will actually POST the data to the server will be the same, a
    `name` and `value` are provided and the server takes care of validating the
    `type`.  For example, an `<input type="number" name="age" min="0" max="150">`
-   on the server will be posted to with simply `number={value}`.  If the
-   `{value}` is invalid, the server will respond indicating so.  Similarly,
-   an `<input type="checkbox" name="check">` would have a submission of just
+   on the server will be posted to with simply `age={value}`.  If the `{value}`
+   is invalid, the server will respond indicating so.  Similarly, an
+   `<input type="checkbox" name="check">` would have a submission of just
    `check=on` or `check=off`.  Implementations are allowed to make the following
    assumptions:
 
@@ -159,7 +159,7 @@ class HttpService {
      root, then `endpoint` should be the empty string `""`.
    @param data_fields
      The entries for the `<input>` elements of the form.  Keys are the field
-     name, values are the field values.  For example:
+     name, and values are the field values.  For example:
      @code{.cpp}
      std::map<std::string, std::string> data_fields;
      // <input type="text" name="scene_sha256">
@@ -172,7 +172,7 @@ class HttpService {
      should be posted.
    @param file_fields
      Any entries for `<input type="file">` elements of the form.  Keys are the
-     field name, values are the (file path, optional mimetype) pair.  For
+     field name, and values are the (file path, optional mimetype) pair.  For
      example:
      @code{.cpp}
      std::map<std::string,
