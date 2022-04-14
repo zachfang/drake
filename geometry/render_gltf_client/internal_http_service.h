@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstdint>
 #include <map>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -25,7 +23,7 @@ struct HttpResponse {
   /* In the event that the server has provided a text or binary response in
    addition to its HTTP response code, the file path described by this attribute
    will contain the response.  An HttpService will populate this field with a
-   non-optional value if and only if a response from the server was provided.
+   non-null value if and only if a response from the server was provided.
    @note
      This is **not** a response loaded into a string, it is a path to a
      non-empty file that contains the response.  The **caller** is responsible
@@ -140,13 +138,11 @@ class HttpService {
      The (shared) temporary directory, e.g., as created from
      drake::temp_directory().  File responses from a server will be stored here.
      The %HttpService does **not** own this directory, and is not responsible
-     for deleting it.  No validity checks on this directory are performed,
-     caller is responsible for providing a directory that can be used as scratch
-     space (e.g., from drake::temp_directory()).
+     for deleting it.  No validity checks on this directory are performed.
    @param url
      The url this HTTP service will communicate with.  May **not** be the empty
      string.  May **not** have any trailing slashes.  Communications are
-     typically constructed as  `temp_directory() + "/" + endpoint`.  For
+     typically constructed as  `url() + "/" + endpoint`.  For
      example, `https://drake.mit.edu` is acceptable, but
      `https://drake.mit.edu/` is not.
    @param port
@@ -184,11 +180,12 @@ class HttpService {
      @endcode
      Supply the empty map if no files are to be uploaded with the `<form>`.
    @param verbose
-     Whether or not client/server communications should be logged.
+     Whether or not client/server communications should be logged to the
+     console.
    @return HttpResponse
      The response from the server, including an HTTP code, and any potential
      additional server response text or data in HttpResponse::data_path.
-   @throws std::runtime_error
+   @throws std::exception
      An exception may be thrown in the event that the provided `endpoint` starts
      or ends with a `/` character.  An exception may also be thrown if an
      irrecoverable error is encountered, e.g., a file path provided in one of
@@ -208,17 +205,18 @@ class HttpService {
 
   /* @name Server Parameter Validation Helpers */
   //@{
-  /* Throws `std::logic_error` if the provided url is empty or has trailing
+  /* Throws an std::exception if the provided url is empty or has trailing
    slashes. */
   void ThrowIfUrlInvalid(const std::string& url) const;
 
-  /* Throws `std::runtime_error` if `endpoint` starts or ends with a '/'. */
+  /* Throws an std::exception if `endpoint` starts or ends with a '/'. */
   void ThrowIfEndpointInvalid(const std::string& endpoint) const;
 
   /* Verifies that all file paths provided are regular files, throw if not.
 
+
    @param file_fields See HttpService::PostForm.
-   @throws std::runtime_error
+   @throws std::exception
      If any of the file paths provided are not regular files, an exception with
      the list of all missing files is thrown. */
   void ThrowIfFilesMissing(

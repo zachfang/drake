@@ -52,13 +52,9 @@ void HttpService::ThrowIfFilesMissing(
     }
   }
   if (missing_files.size() > 0) {
-    std::string exc_message = "Provided file fields had missing file(s): ";
-    for (size_t i = 0; i < missing_files.size(); ++i) {
-      exc_message += missing_files[i];
-      if (i < missing_files.size() - 1) exc_message += ", ";
-    }
-    exc_message += ".";
-    throw std::runtime_error(exc_message);
+    throw std::runtime_error(
+        fmt::format("Provided file fields had missing file(s): {}.",
+                    fmt::join(missing_files, ", ")));
   }
 }
 
