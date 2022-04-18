@@ -147,12 +147,12 @@ class FailService : public HttpService {
  public:
   FailService() : HttpService() {}
 
-  HttpResponse PostForm(const std::string& /* temp_directory */,
-                        const std::string& /* url */, int /* port */,
-                        const std::string& /* endpoint */,
-                        const data_map_t& /* data_fields */,
-                        const file_map_t& /* file_fields */,
-                        bool /* verbose */ = false) override {
+  HttpResponse DoPostForm(const std::string& /* temp_directory */,
+                          const std::string& /* url */, int /* port */,
+                          const std::string& /* endpoint */,
+                          const data_map_t& /* data_fields */,
+                          const file_map_t& /* file_fields */,
+                          bool /* verbose */ = false) override {
     HttpResponse ret;
     ret.http_code = 500;
     ret.service_error = true;
@@ -189,16 +189,12 @@ class FieldCheckService : public HttpService {
         depth_range_{depth_range} {}
 
   // Checks all of the <form> fields.  Always respond with failure (http 500).
-  HttpResponse PostForm(const std::string& /* temp_directory */,
-                        const std::string& url, int /* port */,
-                        const std::string& endpoint,
-                        const data_map_t& data_fields,
-                        const file_map_t& file_fields,
-                        bool /* verbose */ = false) override {
-    ThrowIfUrlInvalid(url);
-    ThrowIfEndpointInvalid(endpoint);
-    ThrowIfFilesMissing(file_fields);
-
+  HttpResponse DoPostForm(const std::string& /* temp_directory */,
+                          const std::string& url, int /* port */,
+                          const std::string& endpoint,
+                          const data_map_t& data_fields,
+                          const file_map_t& file_fields,
+                          bool /* verbose */ = false) override {
     /* Validate all of the expected fields.  This also implicitly validates that
      every expected key has actually been provided since the test will fail on
      directly accessing a key that does not exist. */
@@ -294,15 +290,12 @@ class ProxyService : public HttpService {
   explicit ProxyService(const PostFormCallback_t& callback)
       : HttpService(), post_form_callback_{callback} {}
 
-  HttpResponse PostForm(const std::string& /* temp_directory */,
-                        const std::string& url, int /* port */,
-                        const std::string& endpoint,
-                        const data_map_t& data_fields,
-                        const file_map_t& file_fields,
-                        bool /* verbose */ = false) override {
-    ThrowIfUrlInvalid(url);
-    ThrowIfEndpointInvalid(endpoint);
-    ThrowIfFilesMissing(file_fields);
+  HttpResponse DoPostForm(const std::string& /* temp_directory */,
+                          const std::string& url, int /* port */,
+                          const std::string& endpoint,
+                          const data_map_t& data_fields,
+                          const file_map_t& file_fields,
+                          bool /* verbose */ = false) override {
     return post_form_callback_(endpoint, data_fields, file_fields);
   }
 

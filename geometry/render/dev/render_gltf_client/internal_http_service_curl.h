@@ -21,8 +21,9 @@ class HttpServiceCurl : public HttpService {
   ~HttpServiceCurl() override;
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(HttpServiceCurl);
 
+ protected:
   /* @see HttpService::PostForm */
-  HttpResponse PostForm(
+  HttpResponse DoPostForm(
       const std::string& temp_directory, const std::string& url, int port,
       const std::string& endpoint,
       const std::map<std::string, std::string>& data_fields,

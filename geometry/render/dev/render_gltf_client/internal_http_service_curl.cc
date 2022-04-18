@@ -199,7 +199,7 @@ HttpServiceCurl::HttpServiceCurl() : HttpService() {
 
 HttpServiceCurl::~HttpServiceCurl() {}
 
-HttpResponse HttpServiceCurl::PostForm(
+HttpResponse HttpServiceCurl::DoPostForm(
     const std::string& temp_directory, const std::string& url, int port,
     const std::string& endpoint,
     const std::map<std::string, std::string>& data_fields,
@@ -207,10 +207,6 @@ HttpResponse HttpServiceCurl::PostForm(
                    std::pair<std::string, std::optional<std::string>>>&
         file_fields,
     bool verbose) {
-  ThrowIfUrlInvalid(url);
-  ThrowIfEndpointInvalid(endpoint);
-  ThrowIfFilesMissing(file_fields);
-
   // Create and fill out a <form> to POST.
   CURL* curl{nullptr};
   CURLcode result;

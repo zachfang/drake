@@ -1,16 +1,67 @@
 #pragma once
 
+#include <fstream>
 #include <map>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
+
+#include <fmt/format.h>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/common/filesystem.h"
 
 namespace drake {
 namespace geometry {
 namespace render_gltf_client {
 namespace internal {
+
+/* @name Server Parameter Validation Helpers */
+//@{
+/* Throws an std::exception if the provided url is empty or has trailing
+  slashes. */
+static void ThrowIfUrlInvalid(const std::string& url) {
+  // Validate what can be validated about the provided url.
+  if (url.empty()) {
+    throw std::logic_error("HttpService: url parameter may not be empty.");
+  }
+  if (url.back() == '/') {
+    throw std::logic_error("HttpService: url may not end with '/'.");
+  }
+}
+
+/* Throws an std::exception if `endpoint` starts or ends with a '/'. */
+static void ThrowIfEndpointInvalid(const std::string& endpoint) {
+  if (endpoint.size() >= 1) {
+    if (endpoint.front() == '/' || endpoint.back() == '/') {
+      throw std::runtime_error(fmt::format(
+          "Provided endpoint='{}' is not valid, it may not start or end with "
+          "a '/'.",
+          endpoint));
+    }
+  }
+}
+
+static void ThrowIfFilesMissing(
+    const std::map<std::string,
+                   std::pair<std::string, std::optional<std::string>>>&
+        file_fields) {
+  std::vector<std::string> missing_files;
+  for (const auto& [field_name, field_data_pair] : file_fields) {
+    const auto& file_path = field_data_pair.first;
+    if (!drake::filesystem::is_regular_file(file_path)) {
+      missing_files.emplace_back(fmt::format("{}='{}'", field_name, file_path));
+    }
+  }
+
+  if (missing_files.size() > 0) {
+    throw std::runtime_error(
+        fmt::format("Provided file fields had missing file(s): {}.",
+                    fmt::join(missing_files, ", ")));
+  }
+}
+//@}
 
 /* A simple wrapper struct to encapsulate an HTTP server response. */
 struct HttpResponse {
@@ -60,8 +111,8 @@ struct HttpResponse {
  RenderClient, is responsible for adhering to the server API. */
 class HttpService {
  public:
-  HttpService();
-  virtual ~HttpService();
+  HttpService() {}
+  virtual ~HttpService() {}
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(HttpService);
 
   /* @name Server Interaction Interface */
@@ -193,7 +244,26 @@ class HttpService {
      an inability to connect, or an invalid HTTP response code, should **not**
      produce an exception but rather encode this information in the
      returned HttpResponse for the caller to determine how to proceed. */
-  virtual HttpResponse PostForm(
+  HttpResponse PostForm(
+      const std::string& temp_directory, const std::string& url, int port,
+      const std::string& endpoint,
+      const std::map<std::string, std::string>& data_fields,
+      const std::map<std::string,
+                     std::pair<std::string, std::optional<std::string>>>&
+          file_fields,
+      bool verbose = false) {
+    ThrowIfUrlInvalid(url);
+    ThrowIfEndpointInvalid(endpoint);
+    ThrowIfFilesMissing(file_fields);
+    return DoPostForm(temp_directory, url, port, endpoint, data_fields,
+                      file_fields, verbose);
+  }
+
+ protected:
+  /* The NVI-function for posting an HTML form to a render server. When
+   PostForm calls this, it has already validated the url, the endpoint, and the
+   existence of the files in `file_fields`. */
+  virtual HttpResponse DoPostForm(
       const std::string& temp_directory, const std::string& url, int port,
       const std::string& endpoint,
       const std::map<std::string, std::string>& data_fields,
@@ -201,29 +271,6 @@ class HttpService {
                      std::pair<std::string, std::optional<std::string>>>&
           file_fields,
       bool verbose = false) = 0;
-  //@}
-
-  /* @name Server Parameter Validation Helpers */
-  //@{
-  /* Throws an std::exception if the provided url is empty or has trailing
-   slashes. */
-  void ThrowIfUrlInvalid(const std::string& url) const;
-
-  /* Throws an std::exception if `endpoint` starts or ends with a '/'. */
-  void ThrowIfEndpointInvalid(const std::string& endpoint) const;
-
-  /* Verifies that all file paths provided are regular files, throw if not.
-
-
-   @param file_fields See HttpService::PostForm.
-   @throws std::exception
-     If any of the file paths provided are not regular files, an exception with
-     the list of all missing files is thrown. */
-  void ThrowIfFilesMissing(
-      const std::map<std::string,
-                     std::pair<std::string, std::optional<std::string>>>&
-          file_fields) const;
-  //@}
 };
 
 }  // namespace internal

@@ -149,11 +149,7 @@ RenderClient::RenderClient(const std::string& url, int port,
       render_endpoint_{render_endpoint},
       verbose_{verbose},
       no_cleanup_{no_cleanup},
-      http_service_{std::make_unique<HttpServiceCurl>()} {
-  // Verify url and endpoint now rather than waiting until PostForm.
-  http_service_->ThrowIfUrlInvalid(url_);
-  http_service_->ThrowIfEndpointInvalid(render_endpoint_);
-}
+      http_service_{std::make_unique<HttpServiceCurl>()} {}
 
 RenderClient::~RenderClient() {
   const fs::path temp_dir{temp_directory_};

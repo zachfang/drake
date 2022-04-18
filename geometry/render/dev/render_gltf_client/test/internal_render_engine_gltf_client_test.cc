@@ -236,17 +236,13 @@ class FakeServer : public HttpService {
   /* Writes a testable image to temp_directory, either named color.response,
    depth.response, or label.response.  It will overwrite the file if it already
    exists. */
-  HttpResponse PostForm(const std::string& temp_directory,
-                        const std::string& url, int /* port */,
-                        const std::string& endpoint,
-                        const data_map_t& data_fields,
-                        const file_map_t& file_fields,
-                        bool /* verbose */ = false) override {
+  HttpResponse DoPostForm(const std::string& temp_directory,
+                          const std::string& url, int /* port */,
+                          const std::string& endpoint,
+                          const data_map_t& data_fields,
+                          const file_map_t& file_fields,
+                          bool /* verbose */ = false) override {
     static std::atomic<int64_t> post_id{0};
-
-    ThrowIfUrlInvalid(url);
-    ThrowIfEndpointInvalid(endpoint);
-    ThrowIfFilesMissing(file_fields);
 
     const auto image_type = data_fields.at("image_type");
     const auto width = std::stoi(data_fields.at("width"));

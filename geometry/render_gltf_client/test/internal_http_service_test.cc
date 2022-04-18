@@ -23,7 +23,8 @@ class EmptyService : public HttpService {
  public:
   EmptyService() : HttpService() {}
 
-  HttpResponse PostForm(
+ protected:
+  HttpResponse DoPostForm(
       const std::string& /* temp_directory */, const std::string& url,
       int /* port */, const std::string& endpoint,
       const std::map<std::string, std::string>& /* data_fields */,
@@ -31,41 +32,36 @@ class EmptyService : public HttpService {
                      std::pair<std::string, std::optional<std::string>>>&
           file_fields,
       bool /* verbose */ = false) override {
-    ThrowIfUrlInvalid(url);
-    ThrowIfEndpointInvalid(endpoint);
-    ThrowIfFilesMissing(file_fields);
     HttpResponse ret;
     ret.http_code = 200;
     return ret;
   }
 };
 
+
 GTEST_TEST(HttpService, ThrowIfUrlInvalid) {
   const std::string localhost{"127.0.0.1"};
-  const EmptyService es;
 
   // A valid url should not raise.
-  DRAKE_EXPECT_NO_THROW(es.ThrowIfUrlInvalid(localhost));
+  DRAKE_EXPECT_NO_THROW(ThrowIfUrlInvalid(localhost));
 
   // An empty url should raise.
-  DRAKE_EXPECT_THROWS_MESSAGE(es.ThrowIfUrlInvalid(""),
+  DRAKE_EXPECT_THROWS_MESSAGE(ThrowIfUrlInvalid(""),
                               "HttpService: url parameter may not be empty.");
 
   // A url with a '/' at the end should raise.
-  DRAKE_EXPECT_THROWS_MESSAGE(es.ThrowIfUrlInvalid(localhost + "/"),
+  DRAKE_EXPECT_THROWS_MESSAGE(ThrowIfUrlInvalid(localhost + "/"),
                               "HttpService: url may not end with '/'.");
 }
 
 GTEST_TEST(HttpService, ThrowIfEndpointInvalid) {
-  const EmptyService es;
-
   {
     // Valid endpoints should not raise.
-    DRAKE_EXPECT_NO_THROW(es.ThrowIfEndpointInvalid("render"));
+    DRAKE_EXPECT_NO_THROW(ThrowIfEndpointInvalid("render"));
     // Empty string implies route to /.
-    DRAKE_EXPECT_NO_THROW(es.ThrowIfEndpointInvalid(""));
+    DRAKE_EXPECT_NO_THROW(ThrowIfEndpointInvalid(""));
     // Interior / is allowed.
-    DRAKE_EXPECT_NO_THROW(es.ThrowIfEndpointInvalid("render/scene"));
+    DRAKE_EXPECT_NO_THROW(ThrowIfEndpointInvalid("render/scene"));
   }
 
   {
@@ -82,7 +78,7 @@ GTEST_TEST(HttpService, ThrowIfEndpointInvalid) {
                                                  "/render/scene/",
                                                  "render/scene/"};
     for (const auto& endpoint : bad_endpoints) {
-      DRAKE_EXPECT_THROWS_MESSAGE(es.ThrowIfEndpointInvalid(endpoint),
+      DRAKE_EXPECT_THROWS_MESSAGE(ThrowIfEndpointInvalid(endpoint),
                                   fmt::format(exc_message, endpoint));
     }
   }
@@ -91,7 +87,6 @@ GTEST_TEST(HttpService, ThrowIfEndpointInvalid) {
 GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   // Create an EmptyService and some files to test with.
   const auto temp_dir = drake::temp_directory();
-  const EmptyService es;
 
   const auto test_txt_path = (fs::path(temp_dir) / "test.txt").string();
   std::ofstream test_txt{test_txt_path};
@@ -105,7 +100,7 @@ GTEST_TEST(HttpService, ThrowIfFilesMissing) {
 
   {
     // No exception should be thrown if all files are present.
-    DRAKE_EXPECT_NO_THROW(es.ThrowIfFilesMissing({
+    DRAKE_EXPECT_NO_THROW(ThrowIfFilesMissing({
         {"test", {test_txt_path, std::nullopt}},
         {"image", {fake_jpg_path, "image/jpeg"}},
     }));
@@ -135,14 +130,14 @@ GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   {
     // Exception thrown: one file, does not exist.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        es.ThrowIfFilesMissing({{missing_1_key, missing_1_value}}),
+        ThrowIfFilesMissing({{missing_1_key, missing_1_value}}),
         prefix + missing_1_desc + "\\.");
   }
 
   {
     // Exception thrown: multiple files, none exist.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        es.ThrowIfFilesMissing({{missing_1_key, missing_1_value},
+        ThrowIfFilesMissing({{missing_1_key, missing_1_value},
                                 {missing_2_key, missing_2_value}}),
         make_regex(missing_1_desc, missing_2_desc));
   }
@@ -150,7 +145,7 @@ GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   {
     // Exception thrown: one file exists, the other does not.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        es.ThrowIfFilesMissing({{"test", {test_txt_path, std::nullopt}},
+        ThrowIfFilesMissing({{"test", {test_txt_path, std::nullopt}},
                                 {missing_1_key, missing_1_value}}),
         prefix + missing_1_desc + "\\.");
   }
@@ -158,7 +153,7 @@ GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   {
     // Exception thrown: multiple files exist, multiple do not.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        es.ThrowIfFilesMissing({{"test", {test_txt_path, std::nullopt}},
+        ThrowIfFilesMissing({{"test", {test_txt_path, std::nullopt}},
                                 {missing_1_key, missing_1_value},
                                 {"image", {fake_jpg_path, "image/jpeg"}},
                                 {missing_2_key, missing_2_value}}),
