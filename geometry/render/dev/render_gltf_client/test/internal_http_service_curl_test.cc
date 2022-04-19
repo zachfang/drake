@@ -64,7 +64,6 @@ GTEST_TEST(HttpServiceCurlTest, PostForm) {
         service.PostForm(temp_dir, url, port, "render", {}, {}, verbose);
     EXPECT_FALSE(res_1.Good());
     EXPECT_FALSE(res_1.data_path.has_value());
-    EXPECT_TRUE(res_1.service_error);
     EXPECT_TRUE(res_1.service_error_message.has_value());
     EXPECT_EQ(res_1.service_error_message.value(),
               "Couldn't resolve host name");
@@ -91,7 +90,6 @@ GTEST_TEST(HttpServiceCurlTest, PostForm) {
         verbose);
     EXPECT_FALSE(res_2.Good());
     EXPECT_FALSE(res_2.data_path.has_value());
-    EXPECT_TRUE(res_2.service_error);
     EXPECT_TRUE(res_2.service_error_message.has_value());
     EXPECT_EQ(res_2.service_error_message.value(),
               "Couldn't resolve host name");

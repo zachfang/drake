@@ -155,7 +155,6 @@ class FailService : public HttpService {
                           bool /* verbose */ = false) override {
     HttpResponse ret;
     ret.http_code = 500;
-    ret.service_error = true;
     ret.service_error_message = "FailService always fails.";
     return ret;
   }

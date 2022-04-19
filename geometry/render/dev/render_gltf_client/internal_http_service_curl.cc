@@ -300,7 +300,6 @@ HttpResponse HttpServiceCurl::DoPostForm(
   HttpResponse ret;
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &ret.http_code);
   if (result != CURLE_OK) {
-    ret.service_error = true;
     ret.service_error_message = std::string(curl_easy_strerror(result));
   }
 

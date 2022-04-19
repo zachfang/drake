@@ -82,25 +82,24 @@ struct HttpResponse {
      the file when it is no longer needed. */
   std::optional<std::string> data_path{std::nullopt};
 
-  /* If the underlying HttpService encountered an error, this will be set to
-   true and any additional information provided in
-   HttpResponse::service_error_message. */
-  bool service_error{false};
-
   /* In the event that there was an error with the HttpService processing the
-   request, HttpResponse::service_error will be set to `true` and any additional
-   information that can be provided will be in this string. */
+   request, a non-nullopt service_error_message will be provided.
+   @note
+     Any forms of std::string, including the empty string, will be treated as
+     a service error when checking via HttpResponse::Good().
+   */
   std::optional<std::string> service_error_message{std::nullopt};
 
   /* Whether or not the HTTP transaction was successful.  This includes
    verifying that the HttpResponse::http_code indicates success, but also
    whether or not the underlying HttpService marked it for failure via
-   HttpResponse::service_error.  Note that if a server has not been
-   properly implemented, it may always return `200` even if the response text
-   indicates failure.  This is an error with the server, and there is nothing
-   this framework can do to validate such a scenario. */
+   a nullability check in HttpResponse::service_error_message.  Note that if a
+   server has not been properly implemented, it may always return `200` even if
+   the response text indicates failure.  This is an error with the server, and
+   there is nothing this framework can do to validate such a scenario. */
   bool Good() const {
-    return !service_error && (http_code >= 200 && http_code < 400);
+    return !service_error_message.has_value() &&
+           (http_code >= 200 && http_code < 400);
   }
 };
 
@@ -270,7 +269,7 @@ class HttpService {
       const std::map<std::string,
                      std::pair<std::string, std::optional<std::string>>>&
           file_fields,
-      bool verbose = false) = 0;
+      bool verbose) = 0;
 };
 
 }  // namespace internal
