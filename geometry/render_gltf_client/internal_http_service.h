@@ -96,7 +96,11 @@ struct HttpResponse {
    a nullability check in HttpResponse::service_error_message.  Note that if a
    server has not been properly implemented, it may always return `200` even if
    the response text indicates failure.  This is an error with the server, and
-   there is nothing this framework can do to validate such a scenario. */
+   there is nothing this framework can do to validate such a scenario.
+   @note
+     A redirection response code (300-399) is currently considered a successful
+     transaction.  When and how a server should return a 3xx code is out of the
+     scope of Drake. */
   bool Good() const {
     return !service_error_message.has_value() &&
            (http_code >= 200 && http_code < 400);
