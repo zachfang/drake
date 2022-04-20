@@ -30,13 +30,17 @@ drake_cc_library(
 drake_cc_library(
     name = "internal_render_client",
     srcs = ["internal_render_client.cc"],
-    hdrs = ["internal_render_client.h"],
+    hdrs = [
+        "factory.h",
+        "internal_render_client.h",
+    ],
     deps = [
         ":internal_http_service_curl",
         "//common:filesystem",
         "//common:nice_type_name",
         "//common:temp_directory",
         "//geometry/render:render_camera",
+        "//geometry/render:render_engine",
         "//geometry/render_gltf_client:internal_http_service",
         "//systems/sensors:image",
         "@picosha2",

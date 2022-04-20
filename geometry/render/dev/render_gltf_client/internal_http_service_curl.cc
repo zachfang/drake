@@ -201,7 +201,6 @@ HttpServiceCurl::~HttpServiceCurl() {}
 
 HttpResponse HttpServiceCurl::DoPostForm(
     const std::string& temp_directory, const std::string& url, int port,
-    const std::string& endpoint,
     const std::map<std::string, std::string>& data_fields,
     const std::map<std::string,
                    std::pair<std::string, std::optional<std::string>>>&
@@ -233,8 +232,7 @@ HttpResponse HttpServiceCurl::DoPostForm(
   }
 
   // Setup the POST url.
-  const std::string post_url = url + "/" + endpoint;
-  curl_easy_setopt(curl, CURLOPT_URL, post_url.c_str());
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   if (port > 0) curl_easy_setopt(curl, CURLOPT_PORT, port);
 

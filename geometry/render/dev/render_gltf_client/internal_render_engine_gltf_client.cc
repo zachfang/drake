@@ -156,18 +156,18 @@ RenderEngineGltfClient::RenderEngineGltfClient(
                        // Same as RenderEngineVtkParams default clear color,
                        // though it's value is irrelevant for this renderer.
                        {204 / 255., 229 / 255., 255 / 255.}}),
-      render_client_{std::make_unique<RenderClient>(
-          parameters.url, parameters.port, parameters.render_endpoint,
-          parameters.verbose, parameters.no_cleanup)} {}
+      render_client_{std::make_unique<RenderClient>(parameters)} {}
 
 RenderEngineGltfClient::RenderEngineGltfClient(
     const RenderEngineGltfClient& other)
     : RenderEngineVtk(other),
-      render_client_{std::make_unique<RenderClient>(
-          other.render_client_->url(), other.render_client_->port(),
-          other.render_client_->render_endpoint(),
-          other.render_client_->verbose(),
-          other.render_client_->no_cleanup())} {}
+      render_client_(
+          std::make_unique<RenderClient>(RenderEngineGltfClientParams{
+              std::nullopt, other.render_client_->base_url(),
+              other.render_client_->port(),
+              other.render_client_->render_endpoint(),
+              other.render_client_->verbose(),
+              other.render_client_->no_cleanup()})) {}
 
 std::unique_ptr<RenderEngine> RenderEngineGltfClient::DoClone() const {
   return std::unique_ptr<RenderEngineGltfClient>(

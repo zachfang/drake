@@ -19,29 +19,6 @@ namespace internal {
 
 /* @name Server Parameter Validation Helpers */
 //@{
-/* Throws an std::exception if the provided url is empty or has trailing
-  slashes. */
-static void ThrowIfUrlInvalid(const std::string& url) {
-  // Validate what can be validated about the provided url.
-  if (url.empty()) {
-    throw std::logic_error("HttpService: url parameter may not be empty.");
-  }
-  if (url.back() == '/') {
-    throw std::logic_error("HttpService: url may not end with '/'.");
-  }
-}
-
-/* Throws an std::exception if `endpoint` starts or ends with a '/'. */
-static void ThrowIfEndpointInvalid(const std::string& endpoint) {
-  if (endpoint.size() >= 1) {
-    if (endpoint.front() == '/' || endpoint.back() == '/') {
-      throw std::runtime_error(fmt::format(
-          "Provided endpoint='{}' is not valid, it may not start or end with "
-          "a '/'.",
-          endpoint));
-    }
-  }
-}
 
 static void ThrowIfFilesMissing(
     const std::map<std::string,
@@ -120,7 +97,7 @@ class HttpService {
 
   /* @name Server Interaction Interface */
   //@{
-  /* Posts an HTML `<form>` to the specified `endpoint`.
+  /* Posts an HTML `<form>` to the specified `url`.
 
    An HTML `<form>` may allow for a wide range of different kinds of `<input>`
    data.  For the full listing of available input `type`'s, see the
@@ -194,19 +171,10 @@ class HttpService {
      The %HttpService does **not** own this directory, and is not responsible
      for deleting it.  No validity checks on this directory are performed.
    @param url
-     The url this HTTP service will communicate with.  May **not** be the empty
-     string.  May **not** have any trailing slashes.  Communications are
-     typically constructed as  `url() + "/" + endpoint`.  For
-     example, `https://drake.mit.edu` is acceptable, but
-     `https://drake.mit.edu/` is not.
+     The url this HTTP service will communicate with.
    @param port
      The TCP port this HTTP service will communicate on.  A value less than or
      equal to `0` implies no port level communication is needed.
-   @param endpoint
-     The endpoint the `<form>` should be posted to, e.g., `render`.  May **not**
-     have a leading or trailing `/`, the post is sent to
-     `{url() + "/" + endpoint}`.  If the `<form>` should be posted to the server
-     root, then `endpoint` should be the empty string `""`.
    @param data_fields
      The entries for the `<input>` elements of the form.  Keys are the field
      name, and values are the field values.  For example:
@@ -240,35 +208,30 @@ class HttpService {
      The response from the server, including an HTTP code, and any potential
      additional server response text or data in HttpResponse::data_path.
    @throws std::exception
-     An exception may be thrown in the event that the provided `endpoint` starts
-     or ends with a `/` character.  An exception may also be thrown if an
-     irrecoverable error is encountered, e.g., a file path provided in one of
-     the values of `file_fields` does not exist.  Failed communications such as
-     an inability to connect, or an invalid HTTP response code, should **not**
-     produce an exception but rather encode this information in the
-     returned HttpResponse for the caller to determine how to proceed. */
+     An exception may also be thrown if an irrecoverable error is encountered,
+     e.g., a file path provided in one of the values of `file_fields` does not
+     exist.  Failed communications such as an inability to connect, or an
+     invalid HTTP response code, should **not** produce an exception but rather
+     encode this information in the returned HttpResponse for the caller to
+     determine how to proceed. */
   HttpResponse PostForm(
       const std::string& temp_directory, const std::string& url, int port,
-      const std::string& endpoint,
       const std::map<std::string, std::string>& data_fields,
       const std::map<std::string,
                      std::pair<std::string, std::optional<std::string>>>&
           file_fields,
       bool verbose = false) {
-    ThrowIfUrlInvalid(url);
-    ThrowIfEndpointInvalid(endpoint);
     ThrowIfFilesMissing(file_fields);
-    return DoPostForm(temp_directory, url, port, endpoint, data_fields,
-                      file_fields, verbose);
+    return DoPostForm(temp_directory, url, port, data_fields, file_fields,
+                      verbose);
   }
 
  protected:
   /* The NVI-function for posting an HTML form to a render server. When
-   PostForm calls this, it has already validated the url, the endpoint, and the
-   existence of the files in `file_fields`. */
+   PostForm calls this, it has already validated the url, and the existence of
+   the files in `file_fields`. */
   virtual HttpResponse DoPostForm(
       const std::string& temp_directory, const std::string& url, int port,
-      const std::string& endpoint,
       const std::map<std::string, std::string>& data_fields,
       const std::map<std::string,
                      std::pair<std::string, std::optional<std::string>>>&

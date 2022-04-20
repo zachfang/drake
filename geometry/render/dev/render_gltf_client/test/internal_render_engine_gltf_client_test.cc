@@ -44,7 +44,9 @@ class RenderEngineGltfClientTester {
   }
 
   // RenderClient access methods.
-  const std::string& url() const { return engine_->render_client_->url(); }
+  const std::string& base_url() const {
+    return engine_->render_client_->base_url();
+  }
   int port() const { return engine_->render_client_->port(); }
   const std::string& render_endpoint() const {
     return engine_->render_client_->render_endpoint();
@@ -96,7 +98,7 @@ GTEST_TEST(RenderEngineGltfClient, Constructor) {
     auto* actual_engine = dynamic_cast<RenderEngineGltfClient*>(engine.get());
     EXPECT_NE(actual_engine, nullptr);
     Tester tester{actual_engine};
-    EXPECT_EQ(tester.url(), "http://127.0.0.1");
+    EXPECT_EQ(tester.base_url(), "http://127.0.0.1");
     EXPECT_EQ(tester.port(), 8000);
     EXPECT_EQ(tester.render_endpoint(), "render");
     EXPECT_EQ(tester.verbose(), false);
@@ -112,7 +114,7 @@ GTEST_TEST(RenderEngineGltfClient, Constructor) {
     const Params params{std::nullopt, "0.0.0.0", 0, "super_render", true, true};
     Engine engine{params};
     Tester tester{&engine};
-    EXPECT_EQ(tester.url(), "0.0.0.0");
+    EXPECT_EQ(tester.base_url(), "0.0.0.0");
     EXPECT_EQ(tester.port(), 0);
     EXPECT_EQ(tester.render_endpoint(), "super_render");
     EXPECT_EQ(tester.verbose(), true);
@@ -136,7 +138,7 @@ GTEST_TEST(RenderEngineGltfClient, Clone) {
   ASSERT_NE(actual_engine, nullptr);
   Tester clone_tester{actual_engine};
 
-  EXPECT_EQ(tester.url(), clone_tester.url());
+  EXPECT_EQ(tester.base_url(), clone_tester.base_url());
   EXPECT_EQ(tester.port(), clone_tester.port());
   EXPECT_EQ(tester.render_endpoint(), clone_tester.render_endpoint());
   EXPECT_EQ(tester.verbose(), clone_tester.verbose());
@@ -238,7 +240,6 @@ class FakeServer : public HttpService {
    exists. */
   HttpResponse DoPostForm(const std::string& temp_directory,
                           const std::string& url, int /* port */,
-                          const std::string& endpoint,
                           const data_map_t& data_fields,
                           const file_map_t& file_fields,
                           bool /* verbose */ = false) override {

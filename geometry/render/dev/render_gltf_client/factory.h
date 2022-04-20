@@ -16,18 +16,20 @@ struct RenderEngineGltfClientParams {
   /** The (optional) label to apply when none is otherwise specified.  */
   std::optional<render::RenderLabel> default_label{};
 
-  /** The url of the server communicate with.  Should **not** include a trailing
-   `/` character.  For example, `https://drake.mit.edu` is acceptable while
-   `https://drake.mit.edu/` is not. */
-  std::string url{"http://127.0.0.1"};
+  /** The base url of the server communicate with.  Should **not** be the empty
+   string.  Should **not** include a trailing `/` character.  For example,
+   `https://drake.mit.edu` is acceptable while `https://drake.mit.edu/` is not.
+   The full url is constructed as `base_url + "/" + render_endpoint`. */
+  std::string base_url{"http://127.0.0.1"};
 
   /** The port to communicate on.  A value less than or equal to `0` implies no
    port level communication is needed. */
   int port{8000};
 
-  /** The server endpoint to retrieve renderings from.  Communications will be
-   formed as `{url}/{render_endpoint}`, if the server expects forms posted to
-   `/` then this value should be the empty string. */
+  /** The server endpoint to retrieve renderings from.  Should **not** have a
+   leading or trailing `/` character.  Communications will be formed as
+   `{base_url}/{render_endpoint}`.  If the server expects forms posted to `/`
+   then this value should be the empty string. */
   std::string render_endpoint{"render"};
 
   /** Whether or not the client should log information about which files are
@@ -49,6 +51,28 @@ struct RenderEngineGltfClientParams {
    RenderEngineGltfClientParams::verbose to `true`, or inspecting the parent
    directory described by drake::temp_directory(). */
   bool no_cleanup = false;
+
+  /** Validates base url and endpoint, and throws an exception if any incorrect
+   value is provided. */
+  void ValidateUrlEndpoint() const {
+    if (base_url.empty()) {
+      throw std::logic_error(
+          "RenderEngineGltfClientParams: base_url may not be empty.");
+    }
+
+    if (base_url.back() == '/') {
+      throw std::logic_error(
+          "RenderEngineGltfClientParams: base_url may not end with '/'.");
+    }
+
+    if (render_endpoint.size() >= 1) {
+      if (render_endpoint.front() == '/' || render_endpoint.back() == '/') {
+        throw std::logic_error(
+            "RenderEngineGltfClientParams: render_endpoint may not start or end"
+            " with a '/'.");
+      }
+    }
+  }
 };
 
 /** Constructs a RenderEngine implementation which generates
@@ -77,7 +101,7 @@ struct RenderEngineGltfClientParams {
       // Setup your server information and create the RenderEngine.  This must
       // be done in a non-threaded context (e.g., at program start).
       RenderEngineGltfClientParams params;
-      params.url = "http://some-server.url";
+      params.base_url = "http://some-server.url";
       auto render_engine = MakeRenderEngineGltfClient(params);
 
       // After MakeRenderEngineGltfClient, libcurl has been initialized and you
@@ -96,7 +120,7 @@ struct RenderEngineGltfClientParams {
       // Setup your server information and create the RenderEngine.  This must
       // be done in a non-threaded context (e.g., at program start).
       RenderEngineGltfClientParams params;
-      params.url = "http://some-server.url";
+      params.url = "http://some-server.base_url";
       auto render_engine = MakeRenderEngineGltfClient(params);
 
       // After MakeRenderEngineGltfClient, libcurl has been initialized so your

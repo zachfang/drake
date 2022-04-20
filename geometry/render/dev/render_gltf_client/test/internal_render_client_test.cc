@@ -26,6 +26,7 @@ namespace internal {
 
 namespace fs = drake::filesystem;
 
+using Params = RenderEngineGltfClientParams;
 using geometry::render::ColorRenderCamera;
 using geometry::render::DepthRange;
 using geometry::render::DepthRenderCamera;
@@ -41,7 +42,7 @@ class RenderClientTester {
   void ValidateAttributes(const std::string& url, int port,
                           const std::string& render_endpoint, bool verbose,
                           bool no_cleanup) const {
-    EXPECT_EQ(client_.url(), url);
+    EXPECT_EQ(client_.base_url(), url);
     EXPECT_EQ(client_.port(), port);
     EXPECT_EQ(client_.render_endpoint(), render_endpoint);
     EXPECT_EQ(client_.verbose(), verbose);
@@ -49,7 +50,7 @@ class RenderClientTester {
   }
 
   void CompareAttributes(const RenderClient& other) {
-    ValidateAttributes(other.url(), other.port(), other.render_endpoint(),
+    ValidateAttributes(other.base_url(), other.port(), other.render_endpoint(),
                        other.verbose(), other.no_cleanup());
   }
 
@@ -70,20 +71,24 @@ GTEST_TEST(RenderClient, Constructor) {
   {
     // Provided url may not end with slash.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        RenderClient(url + "/", port, render_endpoint, verbose, no_cleanup),
+        RenderClient(Params{std::nullopt, url + "/", port, render_endpoint,
+                            verbose, no_cleanup}),
         "HttpService: url may not end with '/'\\.");
     // Provided url may not be empty.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        RenderClient("", port, render_endpoint, verbose, no_cleanup),
+        RenderClient(Params{std::nullopt, "", port, render_endpoint, verbose,
+                            no_cleanup}),
         "HttpService: url parameter may not be empty\\.");
     // Provided endpoint may not start with a slash.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        RenderClient(url, port, "/" + render_endpoint, verbose, no_cleanup),
+        RenderClient(Params{std::nullopt, url, port, "/" + render_endpoint,
+                            verbose, no_cleanup}),
         "Provided endpoint='/render' is not valid, it may not start or end "
         "with a '/'\\.");
     // Provided endpoint may not end with a slash.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        RenderClient(url, port, render_endpoint + "/", verbose, no_cleanup),
+        RenderClient(Params{std::nullopt, url, port, render_endpoint + "/",
+                            verbose, no_cleanup}),
         "Provided endpoint='render/' is not valid, it may not start or end "
         "with a '/'\\.");
   }
@@ -93,7 +98,8 @@ GTEST_TEST(RenderClient, Constructor) {
     auto make_client_and_verify = [&](bool p_no_cleanup) {
       std::string temp_directory;
       {
-        RenderClient client{url, port, render_endpoint, verbose, p_no_cleanup};
+        RenderClient client{Params{std::nullopt, url, port, render_endpoint,
+                                   verbose, p_no_cleanup}};
         temp_directory = client.temp_directory();
         RenderClientTester tester{&client};
         EXPECT_TRUE(fs::is_directory(client.temp_directory()));
@@ -120,7 +126,8 @@ GTEST_TEST(RenderClient, Destructor) {
   std::string temp_dir_path;
   // Construction with no_cleanup=false: temp_directory should be gone.
   {
-    const RenderClient client{url, port, render_endpoint, verbose, false};
+    const RenderClient client(
+        Params{std::nullopt, url, port, render_endpoint, verbose, false});
     temp_dir_path = client.temp_directory();
     EXPECT_TRUE(fs::is_directory(temp_dir_path));
   }  // Client is deleted.
@@ -128,7 +135,8 @@ GTEST_TEST(RenderClient, Destructor) {
 
   // Construction with no_cleanup=true: temp_directory should remain.
   {
-    const RenderClient client{url, port, render_endpoint, verbose, true};
+    const RenderClient client(
+        Params{std::nullopt, url, port, render_endpoint, verbose, true});
     temp_dir_path = client.temp_directory();
     EXPECT_TRUE(fs::is_directory(temp_dir_path));
   }  // Client is deleted.
@@ -149,7 +157,6 @@ class FailService : public HttpService {
 
   HttpResponse DoPostForm(const std::string& /* temp_directory */,
                           const std::string& /* url */, int /* port */,
-                          const std::string& /* endpoint */,
                           const data_map_t& /* data_fields */,
                           const file_map_t& /* file_fields */,
                           bool /* verbose */ = false) override {
@@ -190,7 +197,6 @@ class FieldCheckService : public HttpService {
   // Checks all of the <form> fields.  Always respond with failure (http 500).
   HttpResponse DoPostForm(const std::string& /* temp_directory */,
                           const std::string& url, int /* port */,
-                          const std::string& endpoint,
                           const data_map_t& data_fields,
                           const file_map_t& file_fields,
                           bool /* verbose */ = false) override {
@@ -291,11 +297,10 @@ class ProxyService : public HttpService {
 
   HttpResponse DoPostForm(const std::string& /* temp_directory */,
                           const std::string& url, int /* port */,
-                          const std::string& endpoint,
                           const data_map_t& data_fields,
                           const file_map_t& file_fields,
                           bool /* verbose */ = false) override {
-    return post_form_callback_(endpoint, data_fields, file_fields);
+    return post_form_callback_(url, data_fields, file_fields);
   }
 
   PostFormCallback_t post_form_callback_;
@@ -319,7 +324,8 @@ GTEST_TEST(RenderClient, RenderOnServer) {
   const bool no_cleanup{false};
 
   // Create a client and proxy HttpService creation helper.
-  RenderClient client{url, port, render_endpoint, verbose, no_cleanup};
+  RenderClient client(
+      Params{std::nullopt, url, port, render_endpoint, verbose, no_cleanup});
   const auto temp_dir_path = fs::path(client.temp_directory());
 
   // Create a fake scene to "upload" to the "server" and fake response file.
@@ -422,7 +428,8 @@ GTEST_TEST(RenderClient, RenderOnServer) {
           "HTTP Code:\\s*500\\s*"
           "Server Message:\\s*None\\.\\s*",
           render_endpoint, p > 0 ? fmt::format("{}:{}", u, p) : u);
-      RenderClient c{u, p, render_endpoint, verbose, no_cleanup};
+      RenderClient c(
+          Params{std::nullopt, u, p, render_endpoint, verbose, no_cleanup});
       const auto temp = fs::path(c.temp_directory());
       c.SetHttpService(std::make_unique<FailService>());
       DRAKE_EXPECT_THROWS_MESSAGE(
@@ -628,7 +635,8 @@ GTEST_TEST(RenderClient, ComputeSha256) {
   const std::string render_endpoint{"render"};
   const bool verbose = false;
   const bool no_cleanup = false;
-  RenderClient client{url, port, render_endpoint, verbose, no_cleanup};
+  RenderClient client(
+      Params{std::nullopt, url, port, render_endpoint, verbose, no_cleanup});
 
   {
     // Failure case 1: provided input file does not exist.
@@ -686,7 +694,8 @@ GTEST_TEST(RenderClient, RenameHttpServiceResponse) {
   // Keep verbose and no_cleanup `true` to get coverage on log() calls.
   const bool verbose = true;
   const bool no_cleanup = true;
-  const RenderClient client{url, port, render_endpoint, verbose, no_cleanup};
+  const RenderClient client(
+      Params{std::nullopt, url, port, render_endpoint, verbose, no_cleanup});
   const fs::path temp_dir = fs::path(client.temp_directory());
   const std::string scene = temp_dir / "scene.gltf";
   std::ofstream scene_file{scene};
@@ -798,7 +807,8 @@ GTEST_TEST(RenderClient, LoadColorImage) {
   const std::string render_endpoint{"render"};
   const bool verbose = false;
   const bool no_cleanup = false;
-  const RenderClient client{url, port, render_endpoint, verbose, no_cleanup};
+  const RenderClient client(
+      Params{std::nullopt, url, port, render_endpoint, verbose, no_cleanup});
   const fs::path temp_dir = fs::path(client.temp_directory());
 
   // NOTE: keep the images small to reduce test overhead.
@@ -908,7 +918,8 @@ GTEST_TEST(RenderClient, LoadDepthImage) {
   const std::string render_endpoint{"render"};
   const bool verbose = false;
   const bool no_cleanup = false;
-  const RenderClient client{url, port, render_endpoint, verbose, no_cleanup};
+  const RenderClient client(
+      Params{std::nullopt, url, port, render_endpoint, verbose, no_cleanup});
   const fs::path temp_dir = fs::path(client.temp_directory());
 
   // NOTE: keep the images small to reduce test overhead.
@@ -1004,7 +1015,8 @@ GTEST_TEST(RenderClient, LoadLabelImage) {
   const std::string render_endpoint{"render"};
   const bool verbose = false;
   const bool no_cleanup = true;
-  const RenderClient client{url, port, render_endpoint, verbose, no_cleanup};
+  const RenderClient client(
+      Params{std::nullopt, url, port, render_endpoint, verbose, no_cleanup});
   const fs::path temp_dir = fs::path(client.temp_directory());
 
   // NOTE: keep the images small to reduce test overhead.

@@ -140,16 +140,17 @@ std::string UrlWithPort(const std::string& url, int port) {
 
 }  // namespace
 
-RenderClient::RenderClient(const std::string& url, int port,
-                           const std::string& render_endpoint, bool verbose,
-                           bool no_cleanup)
+RenderClient::RenderClient(const RenderEngineGltfClientParams& params)
     : temp_directory_{drake::temp_directory()},
-      url_{url},
-      port_{port},
-      render_endpoint_{render_endpoint},
-      verbose_{verbose},
-      no_cleanup_{no_cleanup},
-      http_service_{std::make_unique<HttpServiceCurl>()} {}
+      base_url_{params.base_url},
+      port_{params.port},
+      render_endpoint_{params.render_endpoint},
+      verbose_{params.verbose},
+      no_cleanup_{params.no_cleanup},
+      http_service_{std::make_unique<HttpServiceCurl>()} {
+  // Verify url and endpoint immediately.
+  params.ValidateUrlEndpoint();
+}
 
 RenderClient::~RenderClient() {
   const fs::path temp_dir{temp_directory_};
@@ -217,9 +218,10 @@ std::string RenderClient::RenderOnServer(
   AddField(&field_map, "submit", "Render");
 
   // Post the form and validate the results.
-  auto response = http_service_->PostForm(
-      temp_directory_, url_, port_, render_endpoint_, field_map,
-      {{"scene", {scene_path, mime_type}}}, verbose_);
+  const std::string url = base_url_ + "/" + render_endpoint_;
+  auto response =
+      http_service_->PostForm(temp_directory_, url, port_, field_map,
+                              {{"scene", {scene_path, mime_type}}}, verbose_);
   if (!response.Good()) {
     /* Server may have responded with meaningful text, try and load the file
      as a string. */
@@ -248,12 +250,12 @@ std::string RenderClient::RenderOnServer(
     throw std::runtime_error(fmt::format(
         R"(
         ERROR doing POST:  /{}
-          Server URL:      {}
+          Server Base URL: {}
           Service Message: {}
           HTTP Code:       {}
           Server Message:  {}
         )",
-        render_endpoint_, UrlWithPort(url_, port_),
+        render_endpoint_, UrlWithPort(base_url_, port_),
         (response.service_error_message.has_value()
              ? response.service_error_message.value()
              : "None."),
@@ -265,14 +267,14 @@ std::string RenderClient::RenderOnServer(
     throw std::runtime_error(fmt::format(
         "ERROR with POST /{} response from server, url={}, HTTP code={}: the "
         "server was supposed to respond with a file but did not.",
-        render_endpoint_, UrlWithPort(url_, port_), response.http_code));
+        render_endpoint_, UrlWithPort(base_url_, port_), response.http_code));
   }
   const std::string bin_out_path = response.data_path.value();
   if (!fs::is_regular_file(bin_out_path)) {
     throw std::runtime_error(fmt::format(
         "ERROR with POST /{} response from service, url={}, HTTP code={}: the "
         "service responded with a file path '{}' but the file does not exist.",
-        render_endpoint_, UrlWithPort(url_, port_), response.http_code,
+        render_endpoint_, UrlWithPort(base_url_, port_), response.http_code,
         bin_out_path));
   }
 
