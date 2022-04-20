@@ -17,6 +17,9 @@ namespace internal {
 namespace {
 
 namespace fs = drake::filesystem;
+using data_map_t = std::map<std::string, std::string>;
+using file_name_path_t = std::pair<std::string, std::optional<std::string>>;
+using file_map_t = std::map<std::string, file_name_path_t>;
 
 // A concrete implementation of HttpService that does nothing.
 class EmptyService : public HttpService {
@@ -38,55 +41,13 @@ class EmptyService : public HttpService {
   }
 };
 
-/*
-GTEST_TEST(HttpService, ThrowIfUrlInvalid) {
-  const std::string localhost{"127.0.0.1"};
-
-  // A valid url should not raise.
-  DRAKE_EXPECT_NO_THROW(ThrowIfUrlInvalid(localhost));
-
-  // An empty url should raise.
-  DRAKE_EXPECT_THROWS_MESSAGE(ThrowIfUrlInvalid(""),
-                              "HttpService: url parameter may not be empty.");
-
-  // A url with a '/' at the end should raise.
-  DRAKE_EXPECT_THROWS_MESSAGE(ThrowIfUrlInvalid(localhost + "/"),
-                              "HttpService: url may not end with '/'.");
-}
-
-GTEST_TEST(HttpService, ThrowIfEndpointInvalid) {
-  {
-    // Valid endpoints should not raise.
-    DRAKE_EXPECT_NO_THROW(ThrowIfEndpointInvalid("render"));
-    // Empty string implies route to /.
-    DRAKE_EXPECT_NO_THROW(ThrowIfEndpointInvalid(""));
-    // Interior / is allowed.
-    DRAKE_EXPECT_NO_THROW(ThrowIfEndpointInvalid("render/scene"));
-  }
-
-  {
-    // Invalid endpoints should raise.
-    const std::string exc_message =
-        "Provided endpoint='{}' is not valid, it may not start or end with a "
-        "'/'.";
-    const std::vector<std::string> bad_endpoints{"/",
-                                                 "//",
-                                                 "/render",
-                                                 "render/",
-                                                 "/render/",
-                                                 "/render/scene",
-                                                 "/render/scene/",
-                                                 "render/scene/"};
-    for (const auto& endpoint : bad_endpoints) {
-      DRAKE_EXPECT_THROWS_MESSAGE(ThrowIfEndpointInvalid(endpoint),
-                                  fmt::format(exc_message, endpoint));
-    }
-  }
-}*/
-
 GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   // Create an EmptyService and some files to test with.
+  EmptyService es;
   const auto temp_dir = drake::temp_directory();
+  const std::string url{"127.0.0.1/render"};
+  const int port{8000};
+  const data_map_t empty_data_fields;
 
   const auto test_txt_path = (fs::path(temp_dir) / "test.txt").string();
   std::ofstream test_txt{test_txt_path};
@@ -99,11 +60,14 @@ GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   fake_jpg.close();
 
   {
+    file_map_t file_fields;
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {"test", {test_txt_path, std::nullopt}}));
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {"image", {fake_jpg_path, "image/jpeg"}}));
     // No exception should be thrown if all files are present.
-    DRAKE_EXPECT_NO_THROW(ThrowIfFilesMissing({
-        {"test", {test_txt_path, std::nullopt}},
-        {"image", {fake_jpg_path, "image/jpeg"}},
-    }));
+    DRAKE_EXPECT_NO_THROW(
+        es.PostForm(temp_dir, url, port, empty_data_fields, file_fields));
   }
 
   // Some file paths that do not exist for testing.
@@ -128,35 +92,52 @@ GTEST_TEST(HttpService, ThrowIfFilesMissing) {
   };
 
   {
+    file_map_t file_fields;
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {missing_1_key, missing_1_value}));
     // Exception thrown: one file, does not exist.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        ThrowIfFilesMissing({{missing_1_key, missing_1_value}}),
+        es.PostForm(temp_dir, url, port, empty_data_fields, file_fields),
         prefix + missing_1_desc + "\\.");
   }
 
   {
+    file_map_t file_fields;
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {missing_1_key, missing_1_value}));
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {missing_2_key, missing_2_value}));
     // Exception thrown: multiple files, none exist.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        ThrowIfFilesMissing({{missing_1_key, missing_1_value},
-                                {missing_2_key, missing_2_value}}),
+        es.PostForm(temp_dir, url, port, empty_data_fields, file_fields),
         make_regex(missing_1_desc, missing_2_desc));
   }
 
   {
+    file_map_t file_fields;
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {"test", {test_txt_path, std::nullopt}}));
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {missing_1_key, missing_1_value}));
     // Exception thrown: one file exists, the other does not.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        ThrowIfFilesMissing({{"test", {test_txt_path, std::nullopt}},
-                                {missing_1_key, missing_1_value}}),
+        es.PostForm(temp_dir, url, port, empty_data_fields, file_fields),
         prefix + missing_1_desc + "\\.");
   }
 
   {
+    file_map_t file_fields;
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {"test", {test_txt_path, std::nullopt}}));
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {missing_1_key, missing_1_value}));
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {"image", {fake_jpg_path, "image/jpeg"}}));
+    file_fields.insert(std::pair<std::string, file_name_path_t>(
+        {missing_2_key, missing_2_value}));
     // Exception thrown: multiple files exist, multiple do not.
     DRAKE_EXPECT_THROWS_MESSAGE(
-        ThrowIfFilesMissing({{"test", {test_txt_path, std::nullopt}},
-                                {missing_1_key, missing_1_value},
-                                {"image", {fake_jpg_path, "image/jpeg"}},
-                                {missing_2_key, missing_2_value}}),
+        es.PostForm(temp_dir, url, port, empty_data_fields, file_fields),
         make_regex(missing_1_desc, missing_2_desc));
   }
 

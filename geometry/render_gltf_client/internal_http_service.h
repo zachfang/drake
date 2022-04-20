@@ -150,13 +150,13 @@ class HttpService {
    // <form>
    // Submit form to /hello:
    auto response_1 = http_service_->PostForm(
-       "hello",
+       temp_dir, "/hello", port,
        {{"name", "Sue"}, {"age", "34"}, {"submit", "Submit"}},
        {});  // No file fields.
    // Suppose `<input type="file" name="photo">` and
    // `<input type="file" name="id">` were added.
    auto response_2 = http_service->PostForm(
-       "hello",
+       temp_dir, "/hello", port,
        {{"name", "Bo"}, {"age", "49"}, {"submit", "Submit"}},
        {{"photo", {"/path/to/bo-profile.jpg", "image/jpeg"}},
         // No mime-type for this file, std::nullopt indicates this.

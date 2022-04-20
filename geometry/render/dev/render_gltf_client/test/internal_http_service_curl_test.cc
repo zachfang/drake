@@ -22,7 +22,7 @@ GTEST_TEST(HttpServiceCurlTest, PostForm) {
   /* NOTE: do not use a URL / port that may be active...
    Use verbose=true (last parameter) to increase coverage via curl callbacks. */
   const std::string temp_dir = drake::temp_directory();
-  const std::string url = "notawebsite/render";
+  const std::string url{"notawebsite/render"};
   const int port{1};
   const bool verbose{true};
   HttpServiceCurl service;
