@@ -22,8 +22,9 @@ struct RenderEngineGltfClientParams {
    The full url is constructed as `base_url + "/" + render_endpoint`. */
   std::string base_url{"http://127.0.0.1"};
 
-  /** The port to communicate on.  A value less than or equal to `0` implies no
-   port level communication is needed. */
+  /** The port to communicate on.  A value less than or equal to `0` will let
+   `base_url` to decide which port to use.  If a different port is needed
+   instead, specifying `port` to overide that. */
   int port{8000};
 
   /** The server endpoint to retrieve renderings from.  Should **not** have a

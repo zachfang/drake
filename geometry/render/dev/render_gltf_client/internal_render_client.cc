@@ -265,15 +265,16 @@ std::string RenderClient::RenderOnServer(
   // If the server did not respond with a file, there is nothing to load.
   if (!response.data_path.has_value()) {
     throw std::runtime_error(fmt::format(
-        "ERROR with POST /{} response from server, url={}, HTTP code={}: the "
-        "server was supposed to respond with a file but did not.",
+        "ERROR with POST /{} response from server, base_url={}, HTTP code={}: "
+        "the server was supposed to respond with a file but did not.",
         render_endpoint_, UrlWithPort(base_url_, port_), response.http_code));
   }
   const std::string bin_out_path = response.data_path.value();
   if (!fs::is_regular_file(bin_out_path)) {
     throw std::runtime_error(fmt::format(
-        "ERROR with POST /{} response from service, url={}, HTTP code={}: the "
-        "service responded with a file path '{}' but the file does not exist.",
+        "ERROR with POST /{} response from service, base_url={}, HTTP code={}: "
+        "the service responded with a file path '{}' but the file does not "
+        "exist.",
         render_endpoint_, UrlWithPort(base_url_, port_), response.http_code,
         bin_out_path));
   }
