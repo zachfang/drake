@@ -149,7 +149,7 @@ RenderClient::RenderClient(const RenderEngineGltfClientParams& params)
       no_cleanup_{params.no_cleanup},
       http_service_{std::make_unique<HttpServiceCurl>()} {
   // Verify url and endpoint immediately.
-  params.ValidateUrlEndpoint();
+  params.Validate();
 }
 
 RenderClient::~RenderClient() {

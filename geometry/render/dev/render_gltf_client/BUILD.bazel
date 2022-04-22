@@ -29,10 +29,13 @@ drake_cc_library(
 
 drake_cc_library(
     name = "internal_render_client",
-    srcs = ["internal_render_client.cc"],
+    srcs = [
+        "internal_render_client.cc",
+        "render_gltf_client_params.cc",
+    ],
     hdrs = [
-        "factory.h",
         "internal_render_client.h",
+        "render_gltf_client_params.h",
     ],
     deps = [
         ":internal_http_service_curl",

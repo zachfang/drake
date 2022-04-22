@@ -1,44 +1,16 @@
 #pragma once
 
-#include <fstream>
 #include <map>
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
-
-#include <fmt/format.h>
 
 #include "drake/common/drake_copyable.h"
-#include "drake/common/filesystem.h"
 
 namespace drake {
 namespace geometry {
 namespace render_gltf_client {
 namespace internal {
-
-/* @name Server Parameter Validation Helpers */
-//@{
-
-static void ThrowIfFilesMissing(
-    const std::map<std::string,
-                   std::pair<std::string, std::optional<std::string>>>&
-        file_fields) {
-  std::vector<std::string> missing_files;
-  for (const auto& [field_name, field_data_pair] : file_fields) {
-    const auto& file_path = field_data_pair.first;
-    if (!drake::filesystem::is_regular_file(file_path)) {
-      missing_files.emplace_back(fmt::format("{}='{}'", field_name, file_path));
-    }
-  }
-
-  if (missing_files.size() > 0) {
-    throw std::runtime_error(
-        fmt::format("Provided file fields had missing file(s): {}.",
-                    fmt::join(missing_files, ", ")));
-  }
-}
-//@}
 
 /* A simple wrapper struct to encapsulate an HTTP server response. */
 struct HttpResponse {
@@ -173,8 +145,9 @@ class HttpService {
    @param url
      The url this HTTP service will communicate with.
    @param port
-     The TCP port this HTTP service will communicate on.  A value less than or
-     equal to `0` implies no port level communication is needed.
+     The port to communicate on.  A value less than or equal to `0` will let
+     `url` to decide which port to use.  If a different port is needed instead,
+     specify `port` to override that.
    @param data_fields
      The entries for the `<input>` elements of the form.  Keys are the field
      name, and values are the field values.  For example:
@@ -220,11 +193,7 @@ class HttpService {
       const std::map<std::string,
                      std::pair<std::string, std::optional<std::string>>>&
           file_fields,
-      bool verbose = false) {
-    ThrowIfFilesMissing(file_fields);
-    return DoPostForm(temp_directory, url, port, data_fields, file_fields,
-                      verbose);
-  }
+      bool verbose = false);
 
  protected:
   /* The NVI-function for posting an HTML form to a render server. When
