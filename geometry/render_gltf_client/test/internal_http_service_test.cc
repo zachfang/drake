@@ -17,6 +17,8 @@ namespace internal {
 namespace {
 
 namespace fs = drake::filesystem;
+
+using DataFieldsMap = std::map<std::string, std::string>;
 using FileFieldPayload = std::pair<std::string, std::optional<std::string>>;
 using FileFieldsMap = std::map<std::string, FileFieldPayload>;
 
@@ -29,7 +31,7 @@ class EmptyService : public HttpService {
   HttpResponse DoPostForm(
       const std::string& /* temp_directory */, const std::string& /* url */,
       int /* port */,
-      const std::map<std::string, std::string>& /* data_fields */,
+      const DataFieldsMap& /* data_fields */,
       const FileFieldsMap& /* file_fields */,
       bool /* verbose */ = false) override {
     HttpResponse ret;
@@ -53,7 +55,7 @@ class HttpServicePostFormTest : public ::testing::Test {
 
   // Exercise HttpService::PostForm using the given file_fields mapping from
   // field name to file path.  (The mime_type is always nullopt.)
-  void PostForm(const std::map<std::string, std::string>& file_fields) {
+  void PostForm(const DataFieldsMap& file_fields) {
     FileFieldsMap actual_fields;
     for (const auto& [field_name, file_path] : file_fields) {
       FileFieldPayload payload;
@@ -63,7 +65,7 @@ class HttpServicePostFormTest : public ::testing::Test {
     EmptyService empty_service;
     const std::string url = "http://127.0.0.1/render";
     const int port = 8000;
-    const std::map<std::string, std::string> string_fields;
+    const DataFieldsMap string_fields;
     empty_service.PostForm(temp_dir_, url, port, string_fields, actual_fields);
   }
 
@@ -107,7 +109,6 @@ TEST_F(HttpServicePostFormTest, MixedFiles) {
           testing::Not(testing::HasSubstr("image")),
           testing::HasSubstr("/no/such/file"))));
 }
-
 
 }  // namespace
 }  // namespace internal
