@@ -51,7 +51,7 @@ struct RenderEngineGltfClientParams {
    directory described by drake::temp_directory(). */
   bool no_cleanup = false;
 
-  /** Validates the struct variables, i.e, base_url and render_endpoint, and
+  /** Validates the struct variables, e.g., base_url and render_endpoint, and
    throws an exception if any incorrect value is provided. */
   void Validate() const;
 };

@@ -54,7 +54,7 @@ namespace geometry {
       // Setup your server information and create the RenderEngine.  This must
       // be done in a non-threaded context (e.g., at program start).
       RenderEngineGltfClientParams params;
-      params.url = "http://some-server.base_url";
+      params.base_url = "http://some-server.url";
       auto render_engine = MakeRenderEngineGltfClient(params);
 
       // After MakeRenderEngineGltfClient, libcurl has been initialized so your

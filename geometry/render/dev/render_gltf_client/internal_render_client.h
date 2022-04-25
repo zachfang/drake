@@ -36,7 +36,7 @@ class RenderClient {
      If a wrong base_url or render_endpoint is provided. */
   explicit RenderClient(const RenderEngineGltfClientParams& params);
 
-  virtual ~RenderClient();
+  ~RenderClient();
 
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RenderClient);
 
@@ -82,7 +82,7 @@ class RenderClient {
    @throws std::logic_error
      If `image_type` is a depth image but `depth_range` was not provided, or
      `depth_range` was provided but `image_type` is color or label. */
-  virtual std::string RenderOnServer(
+  std::string RenderOnServer(
       const drake::geometry::render::RenderCameraCore& camera_core,
       RenderImageType image_type, const std::string& scene_path,
       const std::optional<std::string>& mime_type = std::nullopt,
@@ -156,7 +156,7 @@ class RenderClient {
      If the specified `path` cannot be loaded as an RGB or RGBA PNG file, or the
      image denoted by `path` does not have the same width and height of the
      specified `color_image_out`.*/
-  virtual void LoadColorImage(
+  void LoadColorImage(
       const std::string& path,
       drake::systems::sensors::ImageRgba8U* color_image_out) const;
 
@@ -179,7 +179,7 @@ class RenderClient {
      If the specified `path` cannot be loaded as a single channel TIFF or PNG,
      image, or the image denoted by `path` does not have the same width and
      height of the specified `depth_image_out`. */
-  virtual void LoadDepthImage(
+  void LoadDepthImage(
       const std::string& path,
       drake::systems::sensors::ImageDepth32F* depth_image_out) const;
 
@@ -196,7 +196,7 @@ class RenderClient {
      If the specified `path` cannot be loaded as a single channel unsigned short
      PNG image, or the image denoted by `path` does not have the same width and
      height of the specified `label_image_out`. */
-  virtual void LoadLabelImage(
+  void LoadLabelImage(
       const std::string& path,
       drake::systems::sensors::ImageLabel16I* label_image_out) const;
 
@@ -220,8 +220,9 @@ class RenderClient {
    as `base_url()/render_endpoint()`. */
   const std::string& base_url() const { return base_url_; }
 
-  /* The port of the server to communicate on.  A value of less than or equal
-   `0` means no port level communication is required. */
+  /** The port to communicate on.  A value less than or equal to `0` will let
+   `base_url_` to decide which port to use.  If a different port is needed
+   instead, specify `port` to override that. */
   int port() const { return port_; }
 
   /* The render endpoint of the server, used in RetrieveRender().
@@ -242,12 +243,12 @@ class RenderClient {
 
  private:
   friend class RenderClientTester;
-  std::string temp_directory_;
-  std::string base_url_;
-  int port_;
-  std::string render_endpoint_;
-  bool verbose_;
-  bool no_cleanup_;
+  const std::string temp_directory_;
+  const std::string base_url_;
+  const int port_;
+  const std::string render_endpoint_;
+  const bool verbose_;
+  const bool no_cleanup_;
   std::unique_ptr<HttpService> http_service_;
 };
 

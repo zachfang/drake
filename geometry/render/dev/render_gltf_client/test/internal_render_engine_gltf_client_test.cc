@@ -228,20 +228,21 @@ GTEST_TEST(RenderEngineGltfClient, UpdateViewpoint) {
 }
 
 // Convenience definitions for interacting with HttpService.
-using data_map_t = std::map<std::string, std::string>;
-using file_map_t =
+using DataFieldsMap = std::map<std::string, std::string>;
+using FileFieldsMap =
     std::map<std::string, std::pair<std::string, std::optional<std::string>>>;
+
 class FakeServer : public HttpService {
  public:
-  FakeServer() : HttpService() {}
+  FakeServer() = default;
 
   /* Writes a testable image to temp_directory, either named color.response,
    depth.response, or label.response.  It will overwrite the file if it already
    exists. */
   HttpResponse DoPostForm(const std::string& temp_directory,
                           const std::string& url, int /* port */,
-                          const data_map_t& data_fields,
-                          const file_map_t& file_fields,
+                          const DataFieldsMap& data_fields,
+                          const FileFieldsMap& file_fields,
                           bool /* verbose */ = false) override {
     static std::atomic<int64_t> post_id{0};
 

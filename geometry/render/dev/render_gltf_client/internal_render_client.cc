@@ -38,11 +38,11 @@ using drake::systems::sensors::ImageRgba8U;
 namespace fs = drake::filesystem;
 
 // Convenience definitions for interacting with HttpService.
-using data_map_t = std::map<std::string, std::string>;
+using DataFieldsMap = std::map<std::string, std::string>;
 
 /* Adds field_name = field_data to the map, assumes data_map does **not**
  already have the key `field_name`. */
-void AddField(data_map_t* data_map, const std::string& field_name,
+void AddField(DataFieldsMap* data_map, const std::string& field_name,
               const std::string& field_data) {
   (*data_map)[field_name] = field_data;
 }
@@ -50,7 +50,7 @@ void AddField(data_map_t* data_map, const std::string& field_name,
 /* Template overload so that we do not have to std::to_string every member of
  the intrinsics() below. */
 template <typename T>
-void AddField(data_map_t* data_map, const std::string& field_name,
+void AddField(DataFieldsMap* data_map, const std::string& field_name,
               T field_data) {
   static_assert(
       std::is_arithmetic_v<T> && !std::is_enum_v<T>,
@@ -60,14 +60,15 @@ void AddField(data_map_t* data_map, const std::string& field_name,
 
 // Overload required to prevent bad conversions between const char* and long.
 template <>
-void AddField<const char*>(data_map_t* data_map, const std::string& field_name,
+void AddField<const char*>(DataFieldsMap* data_map,
+                           const std::string& field_name,
                            const char* field_data) {
   AddField(data_map, field_name, std::string(field_data));
 }
 
 // Overload for RenderImageType, to avoid bad conversion via std::to_string.
 template <>
-void AddField<RenderImageType>(data_map_t* data_map,
+void AddField<RenderImageType>(DataFieldsMap* data_map,
                                const std::string& field_name,
                                RenderImageType field_data) {
   if (field_data == RenderImageType::kColorRgba8U) {
@@ -191,7 +192,7 @@ std::string RenderClient::RenderOnServer(
   }
 
   // Add the fields to the form.
-  data_map_t field_map;
+  DataFieldsMap field_map;
   const std::string scene_sha256 = ComputeSha256(scene_path);
   AddField(&field_map, "scene_sha256", scene_sha256);
   AddField(&field_map, "image_type", image_type);
