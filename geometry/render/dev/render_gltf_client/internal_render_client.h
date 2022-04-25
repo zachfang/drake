@@ -208,6 +208,14 @@ class RenderClient {
    set at construction. */
   //@{
 
+  /* Returns a RenderEngineGltfClientParams struct.  Note that `default_label`
+   is not relevant for RenderClient, so it's always set to std::nullopt. */
+  RenderEngineGltfClientParams get_params() const {
+    return RenderEngineGltfClientParams{std::nullopt, base_url_,
+                                        port_,        render_endpoint_,
+                                        verbose_,     no_cleanup_};
+  }
+
   /* The temporary directory used for scratch space, including but not limited
    to where downloaded images are saved.  Child classes are permitted (and
    encouraged) to utilize this directory to create any additional files needed
