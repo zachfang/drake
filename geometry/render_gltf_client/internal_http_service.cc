@@ -10,31 +10,38 @@ namespace drake {
 namespace geometry {
 namespace render_gltf_client {
 namespace internal {
+namespace {
+
+using DataFieldsMap = std::map<std::string, std::string>;
+using FileFieldsMap =
+    std::map<std::string, std::pair<std::string, std::optional<std::string>>>;
+
+void ThrowIfFilesMissing(const FileFieldsMap&file_fields) {
+  std::vector<std::string> missing_files;
+  for (const auto& [field_name, field_data_pair] : file_fields) {
+    const auto& file_path = field_data_pair.first;
+    if (!drake::filesystem::is_regular_file(file_path)) {
+      missing_files.emplace_back(
+          fmt::format("{}='{}'", field_name, file_path));
+    }
+  }
+
+  if (missing_files.size() > 0) {
+    throw std::runtime_error(
+        fmt::format("Provided file fields had missing file(s): {}.",
+                    fmt::join(missing_files, ", ")));
+  }
+}
+
+}  // namespace
 
 HttpResponse HttpService::PostForm(
     const std::string& temp_directory, const std::string& url, int port,
-    const std::map<std::string, std::string>& data_fields,
-    const std::map<std::string,
-                   std::pair<std::string, std::optional<std::string>>>&
-        file_fields,
+    const DataFieldsMap& data_fields,
+    const FileFieldsMap& file_fields,
     bool verbose) {
-  auto throw_if_files_missing = [&file_fields]() {
-    std::vector<std::string> missing_files;
-    for (const auto& [field_name, field_data_pair] : file_fields) {
-      const auto& file_path = field_data_pair.first;
-      if (!drake::filesystem::is_regular_file(file_path)) {
-        missing_files.emplace_back(
-            fmt::format("{}='{}'", field_name, file_path));
-      }
-    }
 
-    if (missing_files.size() > 0) {
-      throw std::runtime_error(
-          fmt::format("Provided file fields had missing file(s): {}.",
-                      fmt::join(missing_files, ", ")));
-    }
-  };
-  throw_if_files_missing();
+  ThrowIfFilesMissing(file_fields);
   return DoPostForm(temp_directory, url, port, data_fields, file_fields,
                     verbose);
 }
