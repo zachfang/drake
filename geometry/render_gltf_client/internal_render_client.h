@@ -126,8 +126,8 @@ class RenderClient {
    @return
      The path to the new file after renaming it.
    @throws std::exception
-     If `input_scene` or `path` do not exist, or any errors arise from renaming
-     the file. */
+     If `response_data_path` or `reference_path` do not exist, or any errors
+     arise from renaming the file. */
   std::string RenameHttpServiceResponse(const std::string& response_data_path,
                                         const std::string& reference_path,
                                         const std::string& extension) const;
