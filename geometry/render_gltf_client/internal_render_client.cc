@@ -280,24 +280,11 @@ std::string RenderClient::ComputeSha256(const std::string& path) {
 
 std::string RenderClient::RenameHttpServiceResponse(
     const std::string& response_data_path, const std::string& reference_path,
-    const std::string& extension) const {
+    const std::string& extension) {
   const fs::path origin{response_data_path};
-  if (!fs::is_regular_file(origin)) {
-    throw std::runtime_error(
-        fmt::format("RenderClient: cannot rename '{}', file does not exist.",
-                    response_data_path));
-  }
-
-  // Require that input path to match is valid.
-  if (!fs::exists(reference_path)) {
-    throw std::runtime_error(
-        fmt::format("RenderClient: cannot rename '{0}' to '{1}' with extension "
-                    "'{2}' as '{1}' does not exist.",
-                    response_data_path, reference_path, extension));
-  }
-
   fs::path destination{reference_path};
   destination.replace_extension(fs::path{extension});
+
   // Do not overwrite files blindly, require a clean directory.
   if (fs::exists(destination)) {
     throw std::runtime_error(fmt::format(
@@ -305,12 +292,7 @@ std::string RenderClient::RenameHttpServiceResponse(
         origin.string(), destination.string()));
   }
 
-  // Rename and log what changed.
   fs::rename(origin, destination);
-  if (params_.verbose) {
-    drake::log()->debug("RenderClient: renamed '{}' to '{}'.", origin.string(),
-                        destination.string());
-  }
 
   return destination;
 }
