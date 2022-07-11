@@ -152,9 +152,9 @@ class RenderClient {
      If the specified `path` cannot be loaded as an unsigned char RGB or RGBA
      PNG file, or the image denoted by `path` does not have the same width and
      height of the specified `color_image_out`.*/
-  void LoadColorImage(
+  static void LoadColorImage(
       const std::string& path,
-      drake::systems::sensors::ImageRgba8U* color_image_out) const;
+      drake::systems::sensors::ImageRgba8U* color_image_out);
 
   /* Loads the specified image file to a drake output buffer.
 
@@ -175,9 +175,9 @@ class RenderClient {
      If the specified `path` cannot be loaded as a single channel 16-bit or
      32-bit TIFF image, or the image denoted by `path` does not have the same
      width and height of the specified `depth_image_out`. */
-  void LoadDepthImage(
+  static void LoadDepthImage(
       const std::string& path,
-      drake::systems::sensors::ImageDepth32F* depth_image_out) const;
+      drake::systems::sensors::ImageDepth32F* depth_image_out);
 
   /* Loads the specified image file to a drake output buffer.
 
@@ -192,9 +192,9 @@ class RenderClient {
      If the specified `path` cannot be loaded as a single channel unsigned short
      PNG image, or the image denoted by `path` does not have the same width and
      height of the specified `label_image_out`. */
-  void LoadLabelImage(
+  static void LoadLabelImage(
       const std::string& path,
-      drake::systems::sensors::ImageLabel16I* label_image_out) const;
+      drake::systems::sensors::ImageLabel16I* label_image_out);
 
   //@}
 

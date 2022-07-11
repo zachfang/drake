@@ -56,11 +56,12 @@ class RenderClientTest : public ::testing::Test {
  public:
   RenderClientTest() {}
 
-  // Creates the given filename.
-  void Touch(const std::string& filename) {
+  // Creates the given filename (and returns the filename for convenience).
+  std::string Touch(const std::string& filename) {
     std::ofstream stream{filename};
     stream << "## RenderClientTest sample file " << filename << "\n";
     DRAKE_DEMAND(stream.good());
+    return filename;
   }
 
  protected:
@@ -622,208 +623,115 @@ TEST_F(RenderClientTest, RenameHttpServiceResponseBad) {
       ".*refusing to rename.*file already exists.*");
 }
 
-TEST_F(RenderClientTest, LoadColorImage) {
-  const std::string base_url{"127.0.0.1:8000"};
-  const std::string render_endpoint{"render"};
-  const bool verbose = false;
-  const bool no_cleanup = false;
-  const RenderClient client{
-      Params{base_url, render_endpoint, std::nullopt, verbose, no_cleanup}};
+TEST_F(RenderClientTest, LoadColorImageGood) {
+  // Loading a three channel (RGB) png file should work as expected.
+  ImageRgba8U rgb(kTestImageWidth, kTestImageHeight, 0);
+  RenderClient::LoadColorImage(kTestRgbImagePath, &rgb);
+  EXPECT_EQ(rgb, CreateTestColorImage(true));
 
-  /* Create a Drake Image buffer with the same dimension as the testing images,
-   i.e., test_{rgb, rgba}_8U.png, to exercise the image loading code.
-   LoadColorImage() will attempt to load the PNG file to the buffer and throw
-   exceptions if the dimension, channel number, or data type is incorrect. */
-  ImageRgba8U drake_image(kTestImageWidth, kTestImageHeight, 0);
-  {
-    // Failure case 1: not a valid PNG file.
-    const auto expected_message = "RenderClient: cannot load '{}' as PNG.";
-    const auto unlikely = "/not/likely/a.png";
-    DRAKE_EXPECT_THROWS_MESSAGE(client.LoadColorImage(unlikely, &drake_image),
-                                fmt::format(expected_message, unlikely));
+  // Loading a four channel (RGBA) png file should work as expected.
+  ImageRgba8U rgba(kTestImageWidth, kTestImageHeight, 0);
+  RenderClient::LoadColorImage(kTestRgbaImagePath, &rgba);
+  EXPECT_EQ(rgba, CreateTestColorImage(false));
+}
 
-    const fs::path temp_dir = fs::path(client.temp_directory());
-    const std::string fake_png_path = temp_dir / "fake.png";
-    std::ofstream fake_png{fake_png_path};
-    fake_png << "not a valid png file.\n";
-    fake_png.close();
+TEST_F(RenderClientTest, LoadColorImageBad) {
+  ImageRgba8U ignored(kTestImageWidth, kTestImageHeight, 0);
+
+  // Failure case 1: no such file.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadColorImage("/no/such/file", &ignored),
+      ".*cannot load.*/no/such/file.*");
+
+  // Failure case 2: not a valid image file.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadColorImage(Touch(scratch_/"fake.png"), &ignored),
+      ".*cannot load.*fake.*");
+
+  // Failure case 3: wrong image dimensions (on each axis).
+  for (const bool selector : {true, false}) {
+    int width = kTestImageWidth;
+    int height = kTestImageHeight;
+    if (selector) { ++width; } else { ++height; }
+    ImageRgba8U wrong_size(width, height, 0);
     DRAKE_EXPECT_THROWS_MESSAGE(
-        client.LoadColorImage(fake_png_path, &drake_image),
-        fmt::format(expected_message, fake_png_path));
-    fs::remove(fake_png_path);
+        RenderClient::LoadColorImage(kTestRgbaImagePath, &wrong_size),
+        ".*expected.*but got.*width=.*height=.*");
   }
 
-  {
-    /* Failure case 2: different image dimensions between the loaded image and
-     the Drake Image buffer.  `test_drake_image` should not be accessed. */
-    const std::vector<std::pair<int, int>> width_height{
-        {1, 1},
-        {kTestImageWidth + 12, kTestImageHeight},
-        {kTestImageWidth * 2, kTestImageHeight * 2}};
-    for (const auto& [w, h] : width_height) {
-      ImageRgba8U test_drake_image(w, h, 0);
-      DRAKE_EXPECT_THROWS_MESSAGE(
-          client.LoadColorImage(kTestRgbaImagePath, &test_drake_image),
-          fmt::format("RenderClient: expected to import "
-                      "\\(width={},height={}\\) from the "
-                      "file '{}', but got \\(width={},height={}\\).",
-                      w, h, kTestRgbaImagePath, kTestImageWidth,
-                      kTestImageHeight));
-    }
-  }
+  // Failure case 4: wrong number of channels (== 1) instead of 3 or 4.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadColorImage(kTestLabelImagePath, &ignored),
+      ".*PNG image.*has 1 channel.*");
+}
 
-  {
-    /* Failure case 3: number of channels not equal to 3 or 4. Test this by
-     loading a single-channel label png instead. */
+TEST_F(RenderClientTest, LoadDepthGood) {
+  // Loading a single channel 32 bit tiff file should work as expected.
+  ImageDepth32F depth(kTestImageWidth, kTestImageHeight, 0);
+  RenderClient::LoadDepthImage(kTestDepthImagePath, &depth);
+  EXPECT_EQ(depth, CreateTestDepthImage());
+}
+
+TEST_F(RenderClientTest, LoadDepthImageBad) {
+  ImageDepth32F ignored(kTestImageWidth, kTestImageHeight, 0);
+
+  // Failure case 1: no such file.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadDepthImage("/no/such/file", &ignored),
+      ".*cannot load.*/no/such/file.*");
+
+  // Failure case 2: not a valid image file.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadDepthImage(Touch(scratch_/"fake.tiff"), &ignored),
+      ".*cannot load.*fake.*");
+
+  // Failure case 3: wrong image dimensions (on each axis).
+  for (const bool selector : {true, false}) {
+    int width = kTestImageWidth;
+    int height = kTestImageHeight;
+    if (selector) { ++width; } else { ++height; }
+    ImageDepth32F wrong_size(width, height, 0);
     DRAKE_EXPECT_THROWS_MESSAGE(
-        client.LoadColorImage(kTestLabelImagePath, &drake_image),
-        fmt::format(
-            "RenderClient: loaded PNG image from '{}' has 1 channel\\(s\\), "
-            "but either 3 \\(RGB\\) or 4 \\(RGBA\\) are required for color "
-            "images.",
-            kTestLabelImagePath));
-  }
-
-  {
-    // Loading a three channel (RGB) png file should work as expected.
-    DRAKE_EXPECT_NO_THROW(
-        client.LoadColorImage(kTestRgbImagePath, &drake_image));
-    EXPECT_EQ(drake_image, CreateTestColorImage(true));
-  }
-
-  {
-    // Loading a four channel (RGBA) png file should work as expected.
-    DRAKE_EXPECT_NO_THROW(
-        client.LoadColorImage(kTestRgbaImagePath, &drake_image));
-    EXPECT_EQ(drake_image, CreateTestColorImage(false));
+        RenderClient::LoadDepthImage(kTestDepthImagePath, &wrong_size),
+        ".*expected.*but got.*width=.*height=.*");
   }
 }
 
-TEST_F(RenderClientTest, LoadDepthImage) {
-  const std::string base_url{"127.0.0.1:8000"};
-  const std::string render_endpoint{"render"};
-  const bool verbose = false;
-  const bool no_cleanup = false;
-  const RenderClient client{
-      Params{base_url, render_endpoint, std::nullopt, verbose, no_cleanup}};
-
-  /* Create a Drake Image buffer with the same dimension as the testing image,
-   i.e., test_depth_32F.tiff, to exercise the image loading code.
-   LoadDepthImage() will attempt to load the TIFF file to the buffer and throw
-   exceptions if the dimension, channel number, or data type is incorrect. */
-  ImageDepth32F drake_image(kTestImageWidth, kTestImageHeight, 0);
-  {
-    // Failure case 1: not a valid TIFF file.
-    const auto expected_message = "RenderClient: cannot load '{}' as TIFF.";
-    const auto unlikely = "/not/likely/a.tiff";
-    DRAKE_EXPECT_THROWS_MESSAGE(client.LoadDepthImage(unlikely, &drake_image),
-                                fmt::format(expected_message, unlikely));
-
-    const fs::path temp_dir = fs::path(client.temp_directory());
-    const std::string fake_tiff_path = temp_dir / "fake.tiff";
-    std::ofstream fake_tiff{fake_tiff_path};
-    fake_tiff << "not a valid tiff file.\n";
-    fake_tiff.close();
-    DRAKE_EXPECT_THROWS_MESSAGE(
-        client.LoadDepthImage(fake_tiff_path, &drake_image),
-        fmt::format(expected_message, fake_tiff_path));
-    fs::remove(fake_tiff_path);
-  }
-
-  {
-    /* Failure case 2: different image dimensions between the loaded image and
-     the drake image buffer.  `test_drake_image` should not be accessed. */
-    const std::vector<std::pair<int, int>> width_height{
-        {1, 1},
-        {kTestImageWidth + 12, kTestImageHeight},
-        {kTestImageWidth * 2, kTestImageHeight * 2}};
-    for (const auto& [w, h] : width_height) {
-      ImageDepth32F test_drake_image(w, h, 0);
-      DRAKE_EXPECT_THROWS_MESSAGE(
-          client.LoadDepthImage(kTestDepthImagePath, &test_drake_image),
-          fmt::format("RenderClient: expected to import "
-                      "\\(width={},height={}\\) from the "
-                      "file '{}', but got \\(width={},height={}\\).",
-                      w, h, kTestDepthImagePath, kTestImageWidth,
-                      kTestImageHeight));
-    }
-  }
-
-  {
-    // Loading a single channel 32 bit tiff file should work as expected.
-    DRAKE_EXPECT_NO_THROW(
-        client.LoadDepthImage(kTestDepthImagePath, &drake_image));
-    EXPECT_EQ(drake_image, CreateTestDepthImage());
-  }
+TEST_F(RenderClientTest, LoadLabelImageGood) {
+  // Loading a 16 bit label image file should work as expected.
+  ImageLabel16I label(kTestImageWidth, kTestImageHeight, 0);
+  RenderClient::LoadLabelImage(kTestLabelImagePath, &label);
+  EXPECT_EQ(label, CreateTestLabelImage());
 }
 
-TEST_F(RenderClientTest, LoadLabelImage) {
-  const std::string base_url{"127.0.0.1:8000"};
-  const std::string render_endpoint{"render"};
-  const bool verbose = false;
-  const bool no_cleanup = true;
-  const RenderClient client{
-      Params{base_url, render_endpoint, std::nullopt, verbose, no_cleanup}};
+TEST_F(RenderClientTest, LoadLabelImageBad) {
+  ImageLabel16I ignored(kTestImageWidth, kTestImageHeight, 0);
 
-  /* Create a Drake Image buffer with the same dimension as the testing image,
-   i.e., test_label_16U.png, to exercise the image loading code.
-   LoadLabelImage() will attempt to load the PNG file to the buffer and throw
-   exceptions if the dimension, channel number, or data type is incorrect. */
-  ImageLabel16I drake_image(kTestImageWidth, kTestImageHeight, 0);
-  {
-    // Failure case 1: not a valid PNG file.
-    const auto expected_message = "RenderClient: cannot load '{}' as PNG.";
-    const auto unlikely = "/not/likely/a.png";
-    DRAKE_EXPECT_THROWS_MESSAGE(client.LoadLabelImage(unlikely, &drake_image),
-                                fmt::format(expected_message, unlikely));
+  // Failure case 1: no such file.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadLabelImage("/no/such/file", &ignored),
+      ".*cannot load.*/no/such/file.*");
 
-    const fs::path temp_dir = fs::path(client.temp_directory());
-    const std::string fake_png_path = temp_dir / "fake.png";
-    std::ofstream fake_png{fake_png_path};
-    fake_png << "not a valid png file.\n";
-    fake_png.close();
+  // Failure case 2: not a valid image file.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadLabelImage(Touch(scratch_/"fake.png"), &ignored),
+      ".*cannot load.*fake.*");
+
+  // Failure case 3: wrong image dimensions (on each axis).
+  for (const bool selector : {true, false}) {
+    int width = kTestImageWidth;
+    int height = kTestImageHeight;
+    if (selector) { ++width; } else { ++height; }
+    ImageLabel16I wrong_size(width, height, 0);
     DRAKE_EXPECT_THROWS_MESSAGE(
-        client.LoadLabelImage(fake_png_path, &drake_image),
-        fmt::format(expected_message, fake_png_path));
-    fs::remove(fake_png_path);
+        RenderClient::LoadLabelImage(kTestLabelImagePath, &wrong_size),
+        ".*expected.*but got.*width=.*height=.*");
   }
 
-  {
-    /* Failure case 2: different image dimensions between the loaded image and
-     the drake image buffer.  `test_drake_image` should not be accessed. */
-    const std::vector<std::pair<int, int>> width_height{
-        {1, 1},
-        {kTestImageWidth + 12, kTestImageHeight},
-        {kTestImageWidth * 2, kTestImageHeight * 2}};
-    for (const auto& [w, h] : width_height) {
-      ImageLabel16I test_drake_image(w, h, 0);
-      DRAKE_EXPECT_THROWS_MESSAGE(
-          client.LoadLabelImage(kTestLabelImagePath, &test_drake_image),
-          fmt::format("RenderClient: expected to import "
-                      "\\(width={},height={}\\) from the "
-                      "file '{}', but got \\(width={},height={}\\).",
-                      w, h, kTestLabelImagePath, kTestImageWidth,
-                      kTestImageHeight));
-    }
-  }
-
-  {
-    /* Failure case 3: number of channels not equal to 1. Test this by loading
-     an RGB image instead. */
-    DRAKE_EXPECT_THROWS_MESSAGE(
-        client.LoadLabelImage(kTestRgbImagePath, &drake_image),
-        fmt::format(
-            "RenderClient: loaded PNG image from '{}' has 3 channels, but only "
-            "1 is allowed for label images.",
-            kTestRgbImagePath));
-  }
-
-  {
-    // Loading a 16 bit label image file should work as expected.
-    DRAKE_EXPECT_NO_THROW(
-        client.LoadLabelImage(kTestLabelImagePath, &drake_image));
-    EXPECT_EQ(drake_image, CreateTestLabelImage());
-  }
+  // Failure case 4: wrong number of channels (== 4) instead of 1.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      RenderClient::LoadLabelImage(kTestRgbImagePath, &ignored),
+      ".*PNG image.*has 3 channel.*");
 }
 
 }  // namespace

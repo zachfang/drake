@@ -298,7 +298,7 @@ std::string RenderClient::RenameHttpServiceResponse(
 }
 
 void RenderClient::LoadColorImage(const std::string& path,
-                                  ImageRgba8U* color_image_out) const {
+                                  ImageRgba8U* color_image_out) {
   DRAKE_DEMAND(color_image_out != nullptr);
 
   // Load the PNG file from disk if possible.
@@ -374,7 +374,7 @@ void RenderClient::LoadColorImage(const std::string& path,
 }
 
 void RenderClient::LoadDepthImage(const std::string& path,
-                                  ImageDepth32F* depth_image_out) const {
+                                  ImageDepth32F* depth_image_out) {
   DRAKE_DEMAND(depth_image_out != nullptr);
 
   // Load the TIFF file from disk if possible.
@@ -417,7 +417,7 @@ void RenderClient::LoadDepthImage(const std::string& path,
 }
 
 void RenderClient::LoadLabelImage(const std::string& path,
-                                  ImageLabel16I* label_image_out) const {
+                                  ImageLabel16I* label_image_out) {
   DRAKE_DEMAND(label_image_out != nullptr);
 
   // Load the PNG file from disk if possible.
