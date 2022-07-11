@@ -267,12 +267,7 @@ std::string RenderClient::RenderOnServer(
       scene_path, scene_sha256, bin_out_path));
 }
 
-std::string RenderClient::ComputeSha256(const std::string& path) const {
-  if (!fs::is_regular_file(path)) {
-    throw std::runtime_error(
-        fmt::format("ComputeSha256: input file '{}' does not exist.", path));
-  }
-
+std::string RenderClient::ComputeSha256(const std::string& path) {
   std::ifstream f_in(path, std::ios::binary);
   if (!f_in.good()) {
     throw std::runtime_error(
@@ -280,7 +275,6 @@ std::string RenderClient::ComputeSha256(const std::string& path) const {
   }
   std::vector<unsigned char> hash(picosha2::k_digest_size);
   picosha2::hash256(f_in, hash.begin(), hash.end());
-  f_in.close();
   return picosha2::bytes_to_hex_string(hash.begin(), hash.end());
 }
 

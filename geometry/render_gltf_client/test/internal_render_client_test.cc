@@ -527,59 +527,19 @@ GTEST_TEST(RenderClient, RenderOnServer) {
   fs::remove_all(temp_dir_path);
 }
 
-GTEST_TEST(RenderClient, ComputeSha256) {
-  const std::string base_url{"127.0.0.1:8000"};
-  const std::string render_endpoint{"render"};
-  const bool verbose = false;
-  const bool no_cleanup = false;
-  RenderClient client{
-      Params{base_url, render_endpoint, std::nullopt, verbose, no_cleanup}};
+GTEST_TEST(RenderClient, ComputeSha256Good) {
+  // To obtain this magic number, use a bash command:
+  //   sha256sum geometry/render_gltf_client/test/test_depth_32F.tiff
+  EXPECT_EQ(
+      RenderClient::ComputeSha256(kTestDepthImagePath),
+      "6bb5621f3cdf06bb43c7104eb9a2dc5ab85db79b2c491be69c7704d03c476c1b");
+}
 
-  {
-    // Failure case 1: provided input file does not exist.
-    const auto unlikely = "/unlikely/to/be/a.file";
-    DRAKE_EXPECT_THROWS_MESSAGE(
-        client.ComputeSha256(unlikely),
-        fmt::format("ComputeSha256: input file '{}' does not exist.",
-                    unlikely));
-  }
-
-  {
-    // Failure case 2: sha256 cannot be computed.
-    const std::string bad_path = fs::path(client.temp_directory()) / "bad.file";
-    std::ofstream bad_file{bad_path};
-    bad_file << "contents should not matter.\n";
-    bad_file.close();
-    fs::permissions(bad_path, fs::perms::all, fs::perm_options::remove);
-    DRAKE_EXPECT_THROWS_MESSAGE(
-        client.ComputeSha256(bad_path),
-        fmt::format("ComputeSha256: cannot open file '{}'.", bad_path));
-    fs::remove(bad_path);
-  }
-
-  {
-    // Success case 1.
-    const std::string f1_path = fs::path(client.temp_directory()) / "f1.bin";
-    std::ofstream f1_file{f1_path};
-    f1_file << "some valuable data!\n";
-    f1_file.close();
-    // echo 'some valuable data!' | sha256sum
-    EXPECT_EQ(
-        "03cbafcd18635120cee6c8d51ac3534a315649627d822651b3d2b587e81ab6e5",
-        client.ComputeSha256(f1_path));
-    fs::remove(f1_path);
-
-    // Success case 2 (proof that different hashes returned).
-    const std::string f2_path = fs::path(client.temp_directory()) / "f2.bin";
-    std::ofstream f2_file{f2_path};
-    f2_file << "additional data that is also valuable?";
-    f2_file.close();
-    // echo -n 'additional data that is also valuable?' | sha256sum
-    EXPECT_EQ(
-        "d40433c78b8f35adf78d25bcc374ea9dbf42f96d85ff29a8d726fe37178878fe",
-        client.ComputeSha256(f2_path));
-    fs::remove(f2_path);
-  }
+GTEST_TEST(RenderClient, ComputeSha256Bad) {
+  // Failure case: provided input file does not exist.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+        RenderClient::ComputeSha256("/no/such/file"),
+        ".*cannot open.*/no/such/file.*");
 }
 
 GTEST_TEST(RenderClient, RenameHttpServiceResponse) {

@@ -93,7 +93,7 @@ class RenderClient {
    @throws std::exception
      If the `path` cannot be opened or the hash fails to compute.
    */
-  std::string ComputeSha256(const std::string& path) const;
+  static std::string ComputeSha256(const std::string& path);
 
   /* Renames the specified file `response_data_path` to have the same name as
    `reference_path`, with a new file extension provided by `extension`.
