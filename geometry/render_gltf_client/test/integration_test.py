@@ -153,5 +153,9 @@ class TestIntegration(unittest.TestCase):
                 break
         self.assertIsNotNone(gltf_file_path)
 
-        with open(gltf_file_path, "r") as f:
+        with open(gltf_file_path, "r") as f, open(
+            "/tmp/golden.gltf", "r"
+        ) as g:
             gltf_file = json.load(f)
+            golden_gltf_file = json.load(g)
+            self.assertEqual(gltf_file["meshes"], golden_gltf_file["meshes"])
