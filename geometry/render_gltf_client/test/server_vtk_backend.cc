@@ -131,19 +131,6 @@ float CheckRangeAndConvertToMeters(float z_buffer_value, double z_near,
   return static_cast<float>(z_buffer_value * (z_far - z_near) + z_near);
 }
 
-// Imported from RenderEngine (protected), for converting the label image.
-ColorI GetColorIFromLabel(const RenderLabel& label) {
-  using ValueType = RenderLabel::ValueType;
-  ValueType label_value = static_cast<ValueType>(label);
-  return ColorI{label_value & 0xFF, (label_value >> 8) & 0xFF, 0};
-}
-
-// Imported from RenderEngine (protected), for converting the label image.
-ColorD GetColorDFromLabel(const RenderLabel& label) {
-  systems::sensors::ColorI i_color = GetColorIFromLabel(label);
-  return ColorD{i_color.r / 255., i_color.g / 255., i_color.b / 255.};
-}
-
 // Validates the output file extension based on `image_type`.
 bool ValidateOutputExtension() {
   if (FLAGS_image_type == "depth") {
@@ -293,7 +280,10 @@ int DoMain() {
       }
     }
   } else {  // FLAGS_image_type == "label"
-    const ColorD empty_color = GetColorDFromLabel(RenderLabel::kEmpty);
+    /* NOTE: The empty background color are hard-coded because the
+    RenderEngine::ColorDFromLabel is protected.  The values are chosen so when
+    the LabelFromColor is called the correct label value is retrieved. */
+    const ColorD empty_color{254.0 / 255.0, 127.0 / 255.0, 0.0};
     renderer->SetBackground(empty_color.r, empty_color.g, empty_color.b);
 
     // Same as RenderEngineVtk, label actors have lighting disabled.  Labels
@@ -312,14 +302,7 @@ int DoMain() {
   render_window->Render();
 
   // Export to the image file via vtk{PNG, TIFF}Writer.
-  if (FLAGS_image_type == "color") {
-    /* Exporting the color image is straightforward, just use the normal VTK
-     pipeline to save the final results from the render_window. */
-    vtkNew<vtkPNGWriter> writer;
-    writer->SetFileName(FLAGS_output_path.c_str());
-    writer->SetInputConnection(window_to_image_filter->GetOutputPort());
-    writer->Write();
-  } else if (FLAGS_image_type == "depth") {
+  if (FLAGS_image_type == "depth") {
     /* For the depth image, we need to unpack the RGB channels from the shader
      in the same way that RenderEngineVtk does. */
     // First: export the image to a local buffer.
@@ -370,41 +353,19 @@ int DoMain() {
     }
     writer->SetFileName(FLAGS_output_path.c_str());
     writer->Write();
-  } else {  // FLAGS_image_type == "label"
-    /* For the label image, we will export to a single channel PNG image with
-     16 bits per pixel.  Extract the value using the same code from drake that
-     RenderEngineVtk does, then save to a PNG. */
-    // First: export the image to a local buffer.
-    vtkNew<vtkImageExport> image_export;
-    image_export->SetInputConnection(window_to_image_filter->GetOutputPort());
-    image_export->Update();
-    ImageRgba8U rgb_image(FLAGS_width, FLAGS_height);
-    image_export->Export(rgb_image.at(0, 0));
+  } else {  // FLAGS_image_type == "label" || FLAGS_image_type == "color"
+    /* Exporting the color image is straightforward, just use the normal VTK
+     pipeline to save the final results from the render_window.
 
-    /* Allocate a single channel ushort image.  Note that vtkImageData supports
-     3D data, the last channel in SetDimensions being `z`. */
+     For the label image, the server returns a colored label image instead. The
+     client, RenderEngineGltfClient, is responsible for reading the colored
+     label image and converting it to the actual label image.  This decision
+     was made because Drake has its own internal interpretation from a color
+     value to a label value.  The glTF file for the label images already
+     contains RGB values encoding labels. */
     vtkNew<vtkPNGWriter> writer;
-    vtkNew<vtkImageData> image_data;
-    writer->SetInputDataObject(image_data);
-    image_data->SetDimensions(FLAGS_width, FLAGS_height, 1);
-    image_data->AllocateScalars(VTK_UNSIGNED_SHORT, 1);
-
-    ColorI color;
-    uint16_t* ptr =
-        static_cast<uint16_t*>(image_data->GetScalarPointer(0, 0, 0));
-    for (int y = 0; y < FLAGS_height; ++y) {
-      for (int x = 0; x < FLAGS_width; ++x) {
-        color.r = rgb_image.at(x, y)[0];
-        color.g = rgb_image.at(x, y)[1];
-        color.b = rgb_image.at(x, y)[2];
-        // This is from RenderLabel::LabelFromColor(ColorI) protected member.
-        RenderLabel::ValueType label =
-            static_cast<RenderLabel::ValueType>(color.r | (color.g << 8));
-        DRAKE_DEMAND(label >= 0);
-        *ptr++ = static_cast<uint16_t>(label);
-      }
-    }
     writer->SetFileName(FLAGS_output_path.c_str());
+    writer->SetInputConnection(window_to_image_filter->GetOutputPort());
     writer->Write();
   }
 
