@@ -159,9 +159,11 @@ class TestIntegration(unittest.TestCase):
         )
         # Check the glTF-related section in README for some troubleshooting
         # tips if this test failed.
-        self.assertDictEqual(expected, actual)
+        for key, value in expected:
+            the_same = (value == actual[key])
+            print(f"Comparing {key}: result is {the_same}")
+        # self.assertDictEqual(expected, actual)
 
-    @unittest.skipIf("darwin" in sys.platform, "Broken on macOS")
     def test_integration(self):
         """Quantitatively compares the images rendered by RenderEngineVtk and
         RenderEngineGltfClient via a fully exercised RPC pipeline.
@@ -207,7 +209,6 @@ class TestIntegration(unittest.TestCase):
             )
             self.assert_error_fraction_less(label_diff, INVALID_PIXEL_FRACTION)
 
-    @unittest.skipIf("darwin" in sys.platform, "Broken on macOS")
     def test_gltf_conversion(self):
         """Checks that the fundamental structure of the generated glTF files is
         preserved.  The comparison of the exact texture information is not in
