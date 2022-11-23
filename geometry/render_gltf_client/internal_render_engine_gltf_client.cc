@@ -13,7 +13,6 @@
 
 #include "drake/common/never_destroyed.h"
 #include "drake/common/text_logging.h"
-#include "drake/geometry/render/render_label.h"
 
 namespace drake {
 namespace geometry {

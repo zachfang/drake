@@ -77,8 +77,6 @@ const auto kTestDepthImage16UTiffPath = FindResourceOrThrow(
     "drake/geometry/render_gltf_client/test/test_depth_16U.tiff");
 const auto kTestDepthImage16UPngPath = FindResourceOrThrow(
     "drake/geometry/render_gltf_client/test/test_depth_16U.png");
-const auto kTestLabelImagePath = FindResourceOrThrow(
-    "drake/geometry/render_gltf_client/test/test_label_16I.png");
 const auto kTestColoredLabelImagePath = FindResourceOrThrow(
     "drake/geometry/render_gltf_client/test/test_colored_label_rgba_8U.png");
 

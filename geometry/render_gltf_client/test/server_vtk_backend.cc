@@ -36,10 +36,8 @@ programs for the glTF Render Client-Server integration test. */
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/text_logging.h"
-#include "drake/geometry/render/render_label.h"
 #include "drake/geometry/render/shaders/depth_shaders.h"
 #include "drake/geometry/render_vtk/internal_render_engine_vtk.h"
-#include "drake/systems/sensors/color_palette.h"
 #include "drake/systems/sensors/image.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
@@ -110,10 +108,7 @@ namespace render_gltf_client {
 namespace internal {
 namespace {
 
-using drake::geometry::render::RenderLabel;
 using drake::geometry::render::internal::ShaderCallback;
-using drake::systems::sensors::ColorD;
-using drake::systems::sensors::ColorI;
 using drake::systems::sensors::ImageDepth32F;
 using drake::systems::sensors::ImageRgba8U;
 using drake::systems::sensors::ImageTraits;
@@ -280,11 +275,11 @@ int DoMain() {
       }
     }
   } else {  // FLAGS_image_type == "label"
-    /* NOTE: The empty background color are hard-coded because the
-    RenderEngine::ColorDFromLabel is protected.  The values are chosen so when
-    the LabelFromColor is called the correct label value is retrieved. */
-    const ColorD empty_color{254.0 / 255.0, 127.0 / 255.0, 0.0};
-    renderer->SetBackground(empty_color.r, empty_color.g, empty_color.b);
+    // TODO(zachfang): We need to find a workaround and document it, so that no
+    // server implementations need to hard-code these magic numbers.
+    /* NOTE: The background color is hard-coded here to match Drake's internal
+     interpretation of the background. */
+    renderer->SetBackground(254.0 / 255.0, 127.0 / 255.0, 0.0);
 
     // Same as RenderEngineVtk, label actors have lighting disabled.  Labels
     // have already been encoded as geometry materials in the glTF.  By
