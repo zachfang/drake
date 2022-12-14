@@ -538,6 +538,14 @@ void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
       std::ifstream alt_file_exist(alt_texture_name);
       if (alt_file_exist) texture_name = alt_texture_name;
     }
+
+    if (diffuse_map_name.empty() && data.mesh_filename) {
+      // This is the hack to search for mesh.png as a possible texture.
+      const std::string alt_texture_name(
+          RemoveFileExtension(*data.mesh_filename) + "_color.png");
+      std::ifstream alt_file_exist(alt_texture_name);
+      if (alt_file_exist) texture_name = alt_texture_name;
+    }
   }
   if (!texture_name.empty()) {
     const Vector2d& uv_scale = data.properties.GetPropertyOrDefault(
