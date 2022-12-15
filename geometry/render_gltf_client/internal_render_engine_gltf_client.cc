@@ -158,7 +158,9 @@ std::string GetSceneFileName(ImageType image_type, int64_t scene_id) {
 RenderEngineGltfClient::RenderEngineGltfClient(
     const RenderEngineGltfClientParams& parameters)
     : RenderEngineVtk({.default_label = parameters.default_label}),
-      render_client_{std::make_unique<RenderClient>(parameters)} {}
+      render_client_{std::make_unique<RenderClient>(parameters)} {
+  drake::logging::set_log_pattern("[%E.%e] [%n] [%l] %v");
+}
 
 RenderEngineGltfClient::RenderEngineGltfClient(
     const RenderEngineGltfClient& other)
@@ -229,6 +231,8 @@ void RenderEngineGltfClient::UpdateViewpoint(
 
 void RenderEngineGltfClient::DoRenderColorImage(
     const ColorRenderCamera& camera, ImageRgba8U* color_image_out) const {
+  drake::log()->info("");
+  drake::log()->info("[01] Entering DoRenderColorImage()");
   const int64_t color_scene_id = GetNextSceneId();
   if (get_params().verbose) {
     LogFrameStart(ImageType::kColor, color_scene_id);
@@ -264,6 +268,8 @@ void RenderEngineGltfClient::DoRenderColorImage(
   if (get_params().cleanup) {
     CleanupFrame(scene_path, image_path, get_params().verbose);
   }
+  drake::log()->info("[11] Exiting DoRenderColorImage()");
+  drake::log()->info("");
 }
 
 void RenderEngineGltfClient::DoRenderDepthImage(
@@ -366,11 +372,13 @@ void RenderEngineGltfClient::DoRenderLabelImage(
 
 void RenderEngineGltfClient::ExportScene(const std::string& export_path,
                                          ImageType image_type) const {
+  drake::log()->info("[02] Entering ExportScene() for {} image", ImageTypeToString(image_type));
   vtkNew<vtkGLTFExporter> gltf_exporter;
   gltf_exporter->InlineDataOn();
   gltf_exporter->SetRenderWindow(get_mutable_pipeline(image_type).window);
   gltf_exporter->SetFileName(export_path.c_str());
   gltf_exporter->Write();
+  drake::log()->info("[03] Exiting ExportScene() for {} image", ImageTypeToString(image_type));
 }
 
 Eigen::Matrix4d RenderEngineGltfClient::CameraModelViewTransformMatrix(

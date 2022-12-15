@@ -226,6 +226,9 @@ std::unique_ptr<RenderEngine> RenderEngineVtk::DoClone() const {
 void RenderEngineVtk::DoRenderColorImage(
     const ColorRenderCamera& camera,
     ImageRgba8U* color_image_out) const {
+  drake::logging::set_log_pattern("[%E.%e] [%n] [%l] %v");
+  drake::log()->info("");
+  drake::log()->info("[01] Entering DoRenderColorImage()");
   UpdateWindow(camera.core(), camera.show_window(),
                *pipelines_[ImageType::kColor], "Color Image");
   PerformVtkUpdate(*pipelines_[ImageType::kColor]);
@@ -233,6 +236,7 @@ void RenderEngineVtk::DoRenderColorImage(
   // TODO(SeanCurtis-TRI): Determine if this copies memory (and find some way
   // around copying).
   pipelines_[ImageType::kColor]->exporter->Export(color_image_out->at(0, 0));
+  drake::log()->info("[11] Exiting DoRenderColorImage()");
 }
 
 void RenderEngineVtk::DoRenderDepthImage(

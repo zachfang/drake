@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import tempfile
 from textwrap import dedent
+import time
 from typing import Dict, Union
 
 from bazel_tools.tools.python.runfiles.runfiles import Create as CreateRunfiles
@@ -374,6 +375,8 @@ def render_callback(render_request: RenderRequest) -> str:
             exceptions raised will result in an internal server error response
             message to the client.
     """
+    request_time = time.time()
+    print(f"[{request_time:10.3f}] [console] [info] [06] Receiving render request")
     # Locate the binary of the renderer.
     runfiles = CreateRunfiles()
     backend_bin = runfiles.Rlocation(
@@ -432,6 +435,8 @@ def render_callback(render_request: RenderRequest) -> str:
 
     # Call the render backend, including capturing any errors.
     try:
+        start_time = time.time()
+        print(f"[{start_time:10.3f}] [console] [info] [07] Starting backend process")
         proc = subprocess.run(proc_args, capture_output=True)
         if proc.returncode != 0:
             message = f"backend exited with code {proc.returncode}."
@@ -442,7 +447,8 @@ def render_callback(render_request: RenderRequest) -> str:
             if stderr:
                 message += f"\nstderr:\n{stderr}"
             raise RuntimeError(message)
-
+        finish_time = time.time()
+        print(f"[{finish_time:10.3f}] [console] [info] [08] Finishing backend process")
         # Inform the caller where the final rendering resides.
         return output_path
     except Exception as e:

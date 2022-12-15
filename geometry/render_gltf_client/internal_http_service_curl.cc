@@ -288,7 +288,9 @@ HttpResponse HttpServiceCurl::DoPostForm(
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &bin_out);
 
   // Perform the POST and drake::log() prior to any potential exceptions.
+  drake::log()->info("[05] Performing to curl");
   result = curl_easy_perform(curl);
+  drake::log()->info("[09] Finishing curling");
   if (!bin_out.good()) {
     cleanup_curl(curl, form, headerlist);
     throw std::runtime_error(fmt::format(

@@ -182,6 +182,7 @@ std::string RenderClient::RenderOnServer(
     const RenderCameraCore& camera_core, RenderImageType image_type,
     const std::string& scene_path, const std::optional<std::string>& mime_type,
     const std::optional<DepthRange>& depth_range) const {
+  drake::log()->info("[04] Entering RenderOnServer()");
   // Make sure depth_range is only provided for depth images.
   const bool is_depth_type = (image_type == RenderImageType::kDepthDepth32F);
   DRAKE_THROW_UNLESS(depth_range.has_value() == is_depth_type);
@@ -274,6 +275,7 @@ std::string RenderClient::RenderOnServer(
    if the file *content* can actually be loaded (regardless of extension). */
   vtkNew<vtkPNGReader> png_reader;
   if (png_reader->CanReadFile(bin_out_path.c_str())) {
+    drake::log()->info("[10] Exiting RenderOnServer()");
     return RenameHttpServiceResponse(bin_out_path, scene_path, ".png");
   }
 
