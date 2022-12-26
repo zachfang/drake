@@ -1,0 +1,158 @@
+{
+    "asset" : {
+        "generator" : "Khronos glTF Blender I/O v1.6.16",
+        "version" : "2.0"
+    },
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                0
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "mesh" : 0,
+            "name" : "spatula_holder_light_blue_issue8027_high"
+        }
+    ],
+    "materials" : [
+        {
+            "doubleSided" : true,
+            "name" : "spatula_holder_material",
+            "normalTexture" : {
+                "index" : 0
+            },
+            "occlusionTexture" : {
+                "index" : 1
+            },
+            "pbrMetallicRoughness" : {
+                "baseColorTexture" : {
+                    "index" : 2
+                },
+                "metallicRoughnessTexture" : {
+                    "index" : 1
+                }
+            }
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "spatula_holder_light_blue_issue8027_high",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 0,
+                        "NORMAL" : 1,
+                        "TEXCOORD_0" : 2
+                    },
+                    "indices" : 3,
+                    "material" : 0
+                }
+            ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
+        },
+        {
+            "sampler" : 0,
+            "source" : 1
+        },
+        {
+            "sampler" : 0,
+            "source" : 2
+        }
+    ],
+    "images" : [
+        {
+            "mimeType" : "image/png",
+            "name" : "spatula_holder_light_blue_issue8027_normal",
+            "uri" : "spatula_holder_light_blue_issue8027_normal.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "spatula_holder_light_blue_issue8027_occlusion_roughness_metallic",
+            "uri" : "spatula_holder_light_blue_issue8027_occlusion_roughness_metallic.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "spatula_holder_light_blue_issue8027_color",
+            "uri" : "spatula_holder_light_blue_issue8027_color.png"
+        }
+    ],
+    "accessors" : [
+        {
+            "bufferView" : 0,
+            "componentType" : 5126,
+            "count" : 2420,
+            "max" : [
+                0.07500001788139343,
+                0.05000001937150955,
+                0.17488157749176025
+            ],
+            "min" : [
+                -0.07500001788139343,
+                -0.05000001937150955,
+                -5.245366807571372e-09
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 1,
+            "componentType" : 5126,
+            "count" : 2420,
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 2,
+            "componentType" : 5126,
+            "count" : 2420,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 3,
+            "componentType" : 5123,
+            "count" : 10680,
+            "type" : "SCALAR"
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 29040,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 29040,
+            "byteOffset" : 29040
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 19360,
+            "byteOffset" : 58080
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 21360,
+            "byteOffset" : 77440
+        }
+    ],
+    "samplers" : [
+        {
+            "magFilter" : 9729,
+            "minFilter" : 9987
+        }
+    ],
+    "buffers" : [
+        {
+            "byteLength" : 98800,
+            "uri" : "spatula_holder_light_blue_issue8027_high.bin"
+        }
+    ]
+}

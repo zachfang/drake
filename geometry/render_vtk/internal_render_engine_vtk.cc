@@ -1,13 +1,17 @@
 #include "drake/geometry/render_vtk/internal_render_engine_vtk.h"
 
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <optional>
 #include <stdexcept>
 #include <utility>
 
+#include <vtkActorCollection.h>
 #include <vtkCamera.h>
 #include <vtkCylinderSource.h>
+#include <vtkGLTFImporter.h>
+// #include <vtkGLTFReader.h>
 #include <vtkOBJReader.h>
 #include <vtkOpenGLPolyDataMapper.h>
 #include <vtkOpenGLShaderProperty.h>
@@ -15,6 +19,8 @@
 #include <vtkPNGReader.h>
 #include <vtkPlaneSource.h>
 #include <vtkProperty.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderer.h>
 #include <vtkTexturedSphereSource.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
@@ -84,13 +90,14 @@ struct RegistrationData {
   std::optional<std::string> mesh_filename;
 };
 
+/*
 std::string RemoveFileExtension(const std::string& filepath) {
   const size_t last_dot = filepath.find_last_of(".");
   if (last_dot == std::string::npos) {
     throw std::logic_error("File has no extension.");
   }
   return filepath.substr(0, last_dot);
-}
+} */
 
 }  // namespace
 
@@ -174,7 +181,12 @@ void RenderEngineVtk::ImplementGeometry(const HalfSpace&,
 }
 
 void RenderEngineVtk::ImplementGeometry(const Mesh& mesh, void* user_data) {
-  ImplementObj(mesh.filename(), mesh.scale(), user_data);
+  const std::string file_name = mesh.filename();
+  if (std::filesystem::path(file_name).extension() == ".obj") {
+    ImplementObj(file_name, mesh.scale(), user_data);
+  } else {  // extension() == ".gltf"
+    ImplementGltf(file_name, mesh.scale(), user_data);
+  }
 }
 
 void RenderEngineVtk::ImplementGeometry(const Sphere& sphere, void* user_data) {
@@ -462,6 +474,40 @@ void RenderEngineVtk::ImplementObj(const std::string& file_name, double scale,
   ImplementGeometry(transform_filter.GetPointer(), user_data);
 }
 
+void RenderEngineVtk::ImplementGltf(const std::string& file_name, double scale,
+                                    void* user_data) {
+  static_cast<RegistrationData*>(user_data)->mesh_filename = file_name;
+
+  // TODO(zachfang): Do we really need this?
+  vtkSmartPointer<vtkRenderWindow> import_window;
+  vtkSmartPointer<vtkRenderer> import_renderer;
+
+  vtkNew<vtkGLTFImporter> gltf_importer;
+  gltf_importer->SetFileName(file_name.c_str());
+  gltf_importer->SetRenderWindow(import_window);
+  import_window = gltf_importer->GetRenderWindow();
+  gltf_importer->Read();
+
+  import_renderer = gltf_importer->GetRenderer();
+  vtkActorCollection* actor_collection = import_renderer->GetActors();
+  actor_collection->InitTraversal();
+  DRAKE_DEMAND(actor_collection->GetNumberOfItems() == 1);
+  vtkActor* actor = actor_collection->GetNextActor();
+  actor->GetMapper()->Update();
+
+  vtkNew<vtkTransform> transform;
+  // TODO(SeanCurtis-TRI): Should I be allowing only isotropic scale.
+  // TODO(SeanCurtis-TRI): Only add the transform filter if scale is not all 1.
+  transform->Scale(scale, scale, scale);
+  vtkNew<vtkTransformPolyDataFilter> transform_filter;
+  transform_filter->SetInputData(
+      dynamic_cast<vtkPolyData*>(actor->GetMapper()->GetInput()));
+  transform_filter->SetTransform(transform.GetPointer());
+  transform_filter->Update();
+
+  ImplementGeometry(transform_filter.GetPointer(), user_data);
+}
+
 void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
                                         void* user_data) {
   DRAKE_DEMAND(user_data != nullptr);
@@ -513,8 +559,10 @@ void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
     connect_actor(ImageType::kLabel);
   }
 
+  // TODO(zachfang): Disable applying textures as the glTF actor is supposed to
+  // be textured from the importer.
   // Color actor.
-  auto& color_actor = actors[ImageType::kColor];
+  /* auto& color_actor = actors[ImageType::kColor];
   const std::string& diffuse_map_name =
       data.properties.GetPropertyOrDefault<std::string>("phong", "diffuse_map",
                                                         "");
@@ -557,7 +605,7 @@ void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
                                              default_diffuse_);
     color_actor->GetProperty()->SetColor(diffuse(0), diffuse(1), diffuse(2));
     color_actor->GetProperty()->SetOpacity(diffuse(3));
-  }
+  } */
   // TODO(SeanCurtis-TRI): Determine if this precludes modulating the texture
   //  with arbitrary rgba values (e.g., tinting red or making everything
   //  slightly transparent). In other words, should opacity be set regardless
