@@ -90,14 +90,13 @@ struct RegistrationData {
   std::optional<std::string> mesh_filename;
 };
 
-/*
 std::string RemoveFileExtension(const std::string& filepath) {
   const size_t last_dot = filepath.find_last_of(".");
   if (last_dot == std::string::npos) {
     throw std::logic_error("File has no extension.");
   }
   return filepath.substr(0, last_dot);
-} */
+}
 
 }  // namespace
 
@@ -492,8 +491,8 @@ void RenderEngineVtk::ImplementGltf(const std::string& file_name, double scale,
   vtkActorCollection* actor_collection = import_renderer->GetActors();
   actor_collection->InitTraversal();
   DRAKE_DEMAND(actor_collection->GetNumberOfItems() == 1);
-  vtkActor* actor = actor_collection->GetNextActor();
-  actor->GetMapper()->Update();
+  vtkActor* color_actor = actor_collection->GetNextActor();
+  color_actor->GetMapper()->Update();
 
   vtkNew<vtkTransform> transform;
   // TODO(SeanCurtis-TRI): Should I be allowing only isotropic scale.
@@ -501,14 +500,15 @@ void RenderEngineVtk::ImplementGltf(const std::string& file_name, double scale,
   transform->Scale(scale, scale, scale);
   vtkNew<vtkTransformPolyDataFilter> transform_filter;
   transform_filter->SetInputData(
-      dynamic_cast<vtkPolyData*>(actor->GetMapper()->GetInput()));
+      dynamic_cast<vtkPolyData*>(color_actor->GetMapper()->GetInput()));
   transform_filter->SetTransform(transform.GetPointer());
   transform_filter->Update();
 
-  ImplementGeometry(transform_filter.GetPointer(), user_data);
+  ImplementGeometry(transform_filter.GetPointer(), color_actor, user_data);
 }
 
 void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
+                                        vtkActor* color_actor,
                                         void* user_data) {
   DRAKE_DEMAND(user_data != nullptr);
 
@@ -525,12 +525,14 @@ void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
   DRAKE_DEMAND(shader_prop != nullptr);
   shader_prop->SetVertexShaderCode(shaders::kDepthVS);
   shader_prop->SetFragmentShaderCode(shaders::kDepthFS);
-  mappers[ImageType::kDepth]->AddObserver(
-      vtkCommand::UpdateShaderEvent, uniform_setting_callback_.Get());
+  mappers[ImageType::kDepth]->AddObserver(vtkCommand::UpdateShaderEvent,
+                                          uniform_setting_callback_.Get());
 
-  for (auto& mapper : mappers) {
+  /* for (auto& mapper : mappers) {
     mapper->SetInputConnection(source->GetOutputPort());
-  }
+  } */
+  mappers[ImageType::kDepth]->SetInputConnection(source->GetOutputPort());
+  mappers[ImageType::kLabel]->SetInputConnection(source->GetOutputPort());
 
   const RegistrationData& data = *static_cast<RegistrationData*>(user_data);
 
@@ -606,6 +608,119 @@ void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
     color_actor->GetProperty()->SetColor(diffuse(0), diffuse(1), diffuse(2));
     color_actor->GetProperty()->SetOpacity(diffuse(3));
   } */
+  // TODO(SeanCurtis-TRI): Determine if this precludes modulating the texture
+  //  with arbitrary rgba values (e.g., tinting red or making everything
+  //  slightly transparent). In other words, should opacity be set regardless
+  //  of whether a texture exists?
+  actors[ImageType::kColor] = color_actor;
+  actors[ImageType::kColor]->SetUserTransform(vtk_X_WG);
+  pipelines_[ImageType::kColor]->renderer->AddActor(
+      actors[ImageType::kColor].Get());
+  // connect_actor(ImageType::kColor);
+
+  // Depth actor; always gets wired in with no additional work.
+  connect_actor(ImageType::kDepth);
+
+  // Take ownership of the actors.
+  actors_.insert({data.id, std::move(actors)});
+}
+
+void RenderEngineVtk::ImplementGeometry(vtkPolyDataAlgorithm* source,
+                                        void* user_data) {
+  DRAKE_DEMAND(user_data != nullptr);
+
+  std::array<vtkSmartPointer<vtkActor>, kNumPipelines> actors{
+      vtkSmartPointer<vtkActor>::New(), vtkSmartPointer<vtkActor>::New(),
+      vtkSmartPointer<vtkActor>::New()};
+  // Note: the mappers ultimately get referenced by the actors, so they do _not_
+  // get destroyed when this array goes out of scope.
+  std::array<vtkNew<vtkOpenGLPolyDataMapper>, kNumPipelines> mappers;
+
+  // Sets vertex and fragment shaders only to the depth mapper.
+  vtkOpenGLShaderProperty* shader_prop = vtkOpenGLShaderProperty::SafeDownCast(
+      actors[ImageType::kDepth]->GetShaderProperty());
+  DRAKE_DEMAND(shader_prop != nullptr);
+  shader_prop->SetVertexShaderCode(shaders::kDepthVS);
+  shader_prop->SetFragmentShaderCode(shaders::kDepthFS);
+  mappers[ImageType::kDepth]->AddObserver(
+      vtkCommand::UpdateShaderEvent, uniform_setting_callback_.Get());
+
+  for (auto& mapper : mappers) {
+    mapper->SetInputConnection(source->GetOutputPort());
+  }
+
+  const RegistrationData& data = *static_cast<RegistrationData*>(user_data);
+
+  vtkSmartPointer<vtkTransform> vtk_X_WG = ConvertToVtkTransform(data.X_WG);
+
+  // Adds the actor into the specified pipeline.
+  auto connect_actor = [this, &actors, &mappers,
+                        &vtk_X_WG](ImageType image_type) {
+    actors[image_type]->SetMapper(mappers[image_type].Get());
+    actors[image_type]->SetUserTransform(vtk_X_WG);
+    pipelines_[image_type]->renderer->AddActor(actors[image_type].Get());
+  };
+
+  // Label actor.
+  const RenderLabel label = GetRenderLabelOrThrow(data.properties);
+  if (label != RenderLabel::kDoNotRender) {
+    // NOTE: We only configure the label actor if it doesn't have to "do not
+    // render" label applied. We *have* created an actor and connected it to
+    // a mapper; but otherwise, we leave it disconnected.
+    auto& label_actor = actors[ImageType::kLabel];
+    // This is to disable shadows and to get an object painted with a single
+    // color.
+    label_actor->GetProperty()->LightingOff();
+    const auto color = RenderEngine::GetColorDFromLabel(label);
+    label_actor->GetProperty()->SetColor(color.r, color.g, color.b);
+    connect_actor(ImageType::kLabel);
+  }
+
+  // Color actor.
+  auto& color_actor = actors[ImageType::kColor];
+  const std::string& diffuse_map_name =
+      data.properties.GetPropertyOrDefault<std::string>("phong", "diffuse_map",
+                                                        "");
+  // Legacy support for *implied* texture maps. If we have mesh.obj, we look for
+  // mesh.png (unless one has been specifically called out in the properties).
+  // TODO(SeanCurtis-TRI): Remove this legacy texture when objects and materials
+  //  are coherently specified by SDF/URDF/obj/mtl, etc.
+  std::string texture_name;
+  std::ifstream file_exist(diffuse_map_name);
+  if (file_exist) {
+    texture_name = diffuse_map_name;
+  } else {
+    if (!diffuse_map_name.empty()) {
+      log()->warn("Requested diffuse map could not be found: {}",
+                  diffuse_map_name);
+    }
+    if (diffuse_map_name.empty() && data.mesh_filename) {
+      // This is the hack to search for mesh.png as a possible texture.
+      const std::string alt_texture_name(
+          RemoveFileExtension(*data.mesh_filename) + ".png");
+      std::ifstream alt_file_exist(alt_texture_name);
+      if (alt_file_exist) texture_name = alt_texture_name;
+    }
+  }
+  if (!texture_name.empty()) {
+    const Vector2d& uv_scale = data.properties.GetPropertyOrDefault(
+        "phong", "diffuse_scale", Vector2d{1, 1});
+    vtkNew<vtkPNGReader> texture_reader;
+    texture_reader->SetFileName(texture_name.c_str());
+    texture_reader->Update();
+    vtkNew<vtkOpenGLTexture> texture;
+    texture->SetInputConnection(texture_reader->GetOutputPort());
+    const bool need_repeat = uv_scale[0] > 1 || uv_scale[1] > 1;
+    texture->SetRepeat(need_repeat);
+    texture->InterpolateOn();
+    color_actor->SetTexture(texture.Get());
+  } else {
+    const Vector4d& diffuse =
+        data.properties.GetPropertyOrDefault("phong", "diffuse",
+                                             default_diffuse_);
+    color_actor->GetProperty()->SetColor(diffuse(0), diffuse(1), diffuse(2));
+    color_actor->GetProperty()->SetOpacity(diffuse(3));
+  }
   // TODO(SeanCurtis-TRI): Determine if this precludes modulating the texture
   //  with arbitrary rgba values (e.g., tinting red or making everything
   //  slightly transparent). In other words, should opacity be set regardless

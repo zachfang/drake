@@ -228,6 +228,9 @@ class RenderEngineVtk : public RenderEngine,
   // Performs the common setup for all shape types.
   void ImplementGeometry(vtkPolyDataAlgorithm* source, void* user_data);
 
+  void ImplementGeometry(vtkPolyDataAlgorithm* source,
+                         vtkActor* color_actor, void* user_data);
+
   void SetDefaultLightPosition(const Vector3<double>& X_DL) override;
 
   // Three pipelines: rgb, depth, and label.
