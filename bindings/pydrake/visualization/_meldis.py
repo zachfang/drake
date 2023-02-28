@@ -105,8 +105,7 @@ class _ViewerApplet:
         # over and over again, since reloading a scene into Meshcat has high
         # latency.
         if self._load_message is not None:
-            if (message.num_links == self._load_message.num_links
-                    and message.encode() == self._load_message.encode()):
+            if self._are_load_messages_equal(message, self._load_message):
                 _logger.info("Ignoring duplicate load message")
                 return
 
@@ -115,6 +114,21 @@ class _ViewerApplet:
 
         self._waiting_for_first_draw_message = True
         self._load_message = message
+
+    def _are_load_messages_equal(self, old_message, new_message):
+        """Compares two lcmt_viewer_load_robot messages without assuming the
+        order of the `lcmt_viewer_load_robot.link` field being identical. This
+        function is currently a quick prototype and subject to change.
+        """
+        if old_message.num_links != new_message.num_links:
+            return False
+
+        old_link_data_set = set()
+        new_link_data_set = set()
+        for i in range(old_message.num_links):
+            old_link_data_set.add(old_message.link[i].encode())
+            new_link_data_set.add(new_message.link[i].encode())
+        return old_link_data_set == new_link_data_set
 
     def _build_links(self):
         # Make all of our (ViewerApplet's) geometry invisible so that the
