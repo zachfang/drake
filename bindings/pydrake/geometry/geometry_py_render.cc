@@ -336,7 +336,7 @@ void DoScalarIndependentDefinitions(py::module m) {
   }
 
   {
-    using Class = geometry::RenderEngineVtkParams;
+    using Class = RenderEngineVtkParams;
     constexpr auto& cls_doc = doc_geometry.RenderEngineVtkParams;
     py::class_<Class> cls(m, "RenderEngineVtkParams", cls_doc.doc);
     cls  // BR
@@ -346,12 +346,12 @@ void DoScalarIndependentDefinitions(py::module m) {
     DefCopyAndDeepCopy(&cls);
   }
 
-  m.def("MakeRenderEngineVtk", &geometry::MakeRenderEngineVtk,
+  m.def("MakeRenderEngineVtk", &MakeRenderEngineVtk,
       py::arg("params") = RenderEngineVtkParams(),
       doc_geometry.MakeRenderEngineVtk.doc);
 
   {
-    using Class = geometry::RenderEngineGlParams;
+    using Class = RenderEngineGlParams;
     constexpr auto& cls_doc = doc_geometry.RenderEngineGlParams;
     py::class_<Class> cls(m, "RenderEngineGlParams", cls_doc.doc);
     cls  // BR
@@ -361,12 +361,12 @@ void DoScalarIndependentDefinitions(py::module m) {
     DefCopyAndDeepCopy(&cls);
   }
 
-  m.def("MakeRenderEngineGl", &geometry::MakeRenderEngineGl,
+  m.def("MakeRenderEngineGl", &MakeRenderEngineGl,
       py::arg("params") = RenderEngineGlParams(),
       doc_geometry.MakeRenderEngineGl.doc);
 
   {
-    using Class = geometry::RenderEngineGltfClientParams;
+    using Class = RenderEngineGltfClientParams;
     constexpr auto& cls_doc = doc_geometry.RenderEngineGltfClientParams;
     py::class_<Class> cls(m, "RenderEngineGltfClientParams", cls_doc.doc);
     cls  // BR
@@ -376,7 +376,7 @@ void DoScalarIndependentDefinitions(py::module m) {
     DefCopyAndDeepCopy(&cls);
   }
 
-  m.def("MakeRenderEngineGltfClient", &geometry::MakeRenderEngineGltfClient,
+  m.def("MakeRenderEngineGltfClient", &MakeRenderEngineGltfClient,
       py::arg("params") = RenderEngineGltfClientParams(),
       doc_geometry.MakeRenderEngineGltfClient.doc);
 
@@ -385,7 +385,7 @@ void DoScalarIndependentDefinitions(py::module m) {
 }  // namespace
 
 void DefineGeometryRender(py::module m) {
-  m.doc() = "Local bindings for `drake::geometry::render`";
+  m.doc() = "Local bindings for render artifacts found in `drake::geometry` and `drake::geometry::render`";
   DoScalarIndependentDefinitions(m);
 }
 
