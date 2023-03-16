@@ -200,16 +200,31 @@ void PointCloud::resize(int new_size, bool skip_initialization) {
 }
 
 void PointCloud::SetFields(pc_flags::Fields new_fields, bool skip_initialize) {
-  if (storage_->fields() == new_fields)
+  const pc_flags::Fields old_fields = storage_->fields();
+  auto set = [=, this](auto ref, auto value) {
+    ref.middleCols(0, size()).setConstant(value);
+  };
+  if (old_fields == new_fields)
     return;
   storage_->UpdateFields(new_fields);
   if (!skip_initialize) {
-    // Detect new fields and does SetDefault-equivalent operations.
+    if (!old_fields.contains(pc_flags::kXYZs) &&
+        new_fields.contains(pc_flags::kXYZs))
+      set(mutable_xyzs(), kDefaultValue);
+    if (!old_fields.contains(pc_flags::kNormals) &&
+        new_fields.contains(pc_flags::kNormals))
+      set(mutable_normals(), kDefaultValue);
+    if (!old_fields.contains(pc_flags::kRGBs) &&
+        new_fields.contains(pc_flags::kRGBs))
+      set(mutable_rgbs(), kDefaultColor);
+    if (!old_fields.has_descriptor() &&
+        new_fields.has_descriptor())
+      set(mutable_descriptors(), kDefaultValue);
   }
 }
 
 void PointCloud::SetDefault(int start, int num) {
-  auto set = [=](auto ref, auto value) {
+  auto set = [=, this](auto ref, auto value) {
     ref.middleCols(start, num).setConstant(value);
   };
   if (has_xyzs()) {
