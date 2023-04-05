@@ -69,6 +69,7 @@ filegroup(
     testonly = 1,
     srcs = [
         "test/box.sdf",
+        "test/meshes/4_color_texture.png",
         "test/diag_gradient.png",
         "test/meshes/box.obj",
         "test/meshes/box.obj.mtl",
