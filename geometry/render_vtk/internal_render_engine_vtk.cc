@@ -522,11 +522,11 @@ void RenderEngineVtk::ImplementObj(const std::string& file_name, double scale,
 
   const RegistrationData& data = *static_cast<RegistrationData*>(user_data);
 
-  vtkNew<vtkRenderer> vtk_renderer;
-  vtkNew<vtkRenderWindow> vtk_render_window;
+  vtkSmartPointer<vtkRenderer> vtk_renderer = vtkRenderer::New();
+  vtkSmartPointer<vtkRenderWindow> vtk_render_window = vtkRenderWindow::New();
   vtk_render_window->AddRenderer(vtk_renderer);
 
-  vtkNew<vtkOBJImporter> importer;
+  vtkSmartPointer<vtkOBJImporter> importer = vtkOBJImporter::New();
   const std::string file_directory =
       std::filesystem::path{file_name}.parent_path();
   // Create three actors for color, depth, and label pipelines.
