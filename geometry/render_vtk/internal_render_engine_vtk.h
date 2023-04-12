@@ -219,6 +219,9 @@ class RenderEngineVtk : public render::RenderEngine,
   void ImplementObj(const std::string& file_name, double scale,
                     void* user_data);
 
+  void ImplementGltf(const std::string& file_name, double scale,
+                     void* user_data);
+
   // Performs the common setup for all shape types.
   void ImplementGeometry(vtkPolyDataAlgorithm* source, void* user_data);
 

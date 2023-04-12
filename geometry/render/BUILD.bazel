@@ -78,6 +78,18 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "test_gltf_models",
+    srcs = [
+        "test/spatula_holder/spatula_holder_light_blue_issue8027_color.png",
+        "test/spatula_holder/spatula_holder_light_blue_issue8027_high.bin",
+        "test/spatula_holder/spatula_holder_light_blue_issue8027_high.gltf",
+        "test/spatula_holder/spatula_holder_light_blue_issue8027_high.sdf",
+        "test/spatula_holder/spatula_holder_light_blue_issue8027_normal.png",
+        "test/spatula_holder/spatula_holder_light_blue_issue8027_occlusion_roughness_metallic.png",  # noqa
+    ],
+)
+
 drake_cc_googletest(
     name = "render_camera_test",
     deps = [

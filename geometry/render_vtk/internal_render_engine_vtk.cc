@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <limits>
 #include <optional>
 #include <stdexcept>
@@ -10,6 +11,7 @@
 #include <vtkActorCollection.h>
 #include <vtkCamera.h>
 #include <vtkCylinderSource.h>
+#include <vtkGLTFImporter.h>
 #include <vtkImageCast.h>
 #include <vtkOBJImporter.h>
 #include <vtkOpenGLPolyDataMapper.h>
@@ -244,7 +246,15 @@ void RenderEngineVtk::ImplementGeometry(const HalfSpace&,
 }
 
 void RenderEngineVtk::ImplementGeometry(const Mesh& mesh, void* user_data) {
-  ImplementObj(mesh.filename(), mesh.scale(), user_data);
+  const std::string extension =
+      std::filesystem::path(mesh.filename()).extension();
+  if (extension == ".obj") {
+    ImplementObj(mesh.filename(), mesh.scale(), user_data);
+  } else if (extension == ".gltf") {
+    ImplementGltf(mesh.filename(), mesh.scale(), user_data);
+  } else {
+    throw std::runtime_error("Unsupported mesh type");
+  }
 }
 
 void RenderEngineVtk::ImplementGeometry(const Sphere& sphere, void* user_data) {
@@ -562,6 +572,76 @@ void RenderEngineVtk::ImplementObj(const std::string& file_name, double scale,
   if (no_mtl) {
     SetColorActorTexture(actors[ImageType::kColor], data, default_diffuse_);
   }
+  connect_actor(ImageType::kColor);
+
+  // Depth actor.
+  SetDepthShader(actors[ImageType::kDepth]);
+  connect_actor(ImageType::kDepth);
+
+  // Label actor.
+  const RenderLabel label = GetRenderLabelOrThrow(data.properties);
+  if (label != RenderLabel::kDoNotRender) {
+    // NOTE: We only configure the label actor if it doesn't have "do not
+    // render" label applied. We *have* created the actor; but otherwise, we
+    // leave it disconnected.
+
+    // The label_actor may have a texture applied already via vtkOBJImporter,
+    // explicit remove any texture for proper label rendering.
+    actors[ImageType::kLabel]->SetTexture(nullptr);
+
+    const ColorD color = RenderEngine::GetColorDFromLabel(label);
+    SetLabelActorTexture(actors[ImageType::kLabel], color);
+    connect_actor(ImageType::kLabel);
+  }
+
+  actors_.insert({data.id, std::move(actors)});
+}
+
+void RenderEngineVtk::ImplementGltf(const std::string& file_name, double scale,
+                                    void* user_data) {
+  static_cast<RegistrationData*>(user_data)->mesh_filename = file_name;
+  std::array<vtkSmartPointer<vtkActor>, kNumPipelines> actors{
+      vtkSmartPointer<vtkActor>::New(), vtkSmartPointer<vtkActor>::New(),
+      vtkSmartPointer<vtkActor>::New()};
+
+  const RegistrationData& data = *static_cast<RegistrationData*>(user_data);
+
+  vtkSmartPointer<vtkRenderer> vtk_renderer = vtkRenderer::New();
+  vtkSmartPointer<vtkRenderWindow> vtk_render_window = vtkRenderWindow::New();
+  vtk_render_window->AddRenderer(vtk_renderer);
+
+  vtkSmartPointer<vtkGLTFImporter> importer = vtkGLTFImporter::New();
+  const std::string file_directory =
+      std::filesystem::path{file_name}.parent_path();
+  // Create three actors for color, depth, and label pipelines.
+  for (int i = 0; i < kNumPipelines; ++i) {
+    importer->SetFileName(file_name.c_str());
+    importer->SetRenderWindow(vtk_render_window);
+    importer->Update();
+  }
+
+  vtkActorCollection* actor_collection = vtk_renderer->GetActors();
+  DRAKE_DEMAND(actor_collection->GetNumberOfItems() == kNumPipelines);
+  actor_collection->InitTraversal();
+  for (int i = 0; i < actor_collection->GetNumberOfItems(); ++i) {
+    vtkActor* actor = actor_collection->GetNextActor();
+    actors[i].TakeReference(actor);
+  }
+
+  vtkSmartPointer<vtkTransform> vtk_X_WG = ConvertToVtkTransform(data.X_WG);
+  // Adds the actor into the specified pipeline.
+  auto connect_actor = [this, &actors, &vtk_X_WG,
+                        &scale](ImageType image_type) {
+    actors[image_type]->SetScale(scale, scale, scale);
+    actors[image_type]->SetUserTransform(vtk_X_WG);
+    pipelines_[image_type]->renderer->AddActor(actors[image_type].Get());
+  };
+
+  // Color actor.
+  /* const bool no_mtl = std::string{importer->GetFileNameMTL()}.empty();
+  if (no_mtl) {
+    SetColorActorTexture(actors[ImageType::kColor], data, default_diffuse_);
+  } */
   connect_actor(ImageType::kColor);
 
   // Depth actor.

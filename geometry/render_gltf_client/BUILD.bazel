@@ -257,6 +257,8 @@ drake_cc_binary(
     data = [
         ":test/4_color_texture.png",
         ":test/example_scene.sdf",
+        "//geometry/render:test_models",
+        "//geometry/render:test_gltf_models",
         "//manipulation/models/ycb:models",
     ],
     deps = [

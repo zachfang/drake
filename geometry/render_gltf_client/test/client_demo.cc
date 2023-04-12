@@ -74,7 +74,7 @@ using drake::geometry::RenderEngineGltfClientParams;
 
 // TODO(jwnimmer-tri) This is way too much configuration data to parse using
 // gflags. Rewrite to use YAML input, instead.
-DEFINE_double(simulation_time, 10.0,
+DEFINE_double(simulation_time, 0.5,
               "Desired duration of the simulation in seconds.");
 DEFINE_bool(color, true, "Sets the enabled camera to render color");
 DEFINE_bool(depth, true, "Sets the enabled camera to render depth");
@@ -91,7 +91,7 @@ DEFINE_double(render_fps, 10, "Frames per simulation second to render");
    Diffuse: "0.0, 0.0, 0.0, 1.57, 3.14, 0.0"
    Textured: "0.0, 0.0, 0.0, -1.57, 0.0, 0.0"
  */
-DEFINE_string(camera_xyz_rpy, "0.8, 0.0, 0.5, -2.2, 0.0, 1.57",
+DEFINE_string(camera_xyz_rpy, "0.5, 0.0, 0.2, -1.8, 0.0, 1.57",
               "Sets the camera pose by xyz (meters) and rpy (radians) values.");
 DEFINE_string(
     save_dir, "",
@@ -204,8 +204,9 @@ int DoMain() {
   // we don't want to have to wait for gravity to take effect to observe a
   // difference in position.
   Parser parser{&plant};
-  parser.AddModels(FindResourceOrThrow(
-      "drake/geometry/render_gltf_client/test/example_scene.sdf"));
+  parser.AddModels(
+      FindResourceOrThrow("drake/geometry/render/test/spatula_holder/"
+                          "spatula_holder_light_blue_issue8027_high.sdf"));
 
   DrakeLcm lcm;
   DrakeVisualizerd::AddToBuilder(&builder, scene_graph, &lcm);
@@ -291,7 +292,9 @@ int DoMain() {
   auto diagram = builder.Build();
 
   systems::Simulator<double> simulator(*diagram);
+  plant.mutable_gravity_field().set_gravity_vector({0, 0, 0});
 
+  /*
   auto& context = static_cast<systems::DiagramContext<double>&>(
       simulator.get_mutable_context());
   auto& plant_context = plant.GetMyMutableContextFromRoot(&context);
@@ -308,7 +311,7 @@ int DoMain() {
   const SpatialVelocity<double> V_WMustardBottle(Vector3d{0.6, 0, 0},
                                                  Vector3d{0, 0, 0.1});
   plant.SetFreeBodySpatialVelocity(&plant_context, mustard_body,
-                                   V_WMustardBottle);
+                                   V_WMustardBottle); */
   simulator.set_target_realtime_rate(1.f);
   simulator.AdvanceTo(FLAGS_simulation_time);
 
