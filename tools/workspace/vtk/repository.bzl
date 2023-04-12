@@ -811,6 +811,7 @@ licenses([
             "vtkPropCollection.h",
             "vtkProperty.h",
             "vtkRenderWindow.h",
+            "vtkRenderWindowInteractor.h",
             "vtkRenderer.h",
             "vtkRenderingCoreModule.h",
             "vtkShaderProperty.h",

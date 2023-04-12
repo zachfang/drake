@@ -21,6 +21,7 @@
 #include <vtkPlaneSource.h>
 #include <vtkProperty.h>
 #include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkTexturedSphereSource.h>
 #include <vtkTransform.h>
@@ -608,7 +609,10 @@ void RenderEngineVtk::ImplementGltf(const std::string& file_name, double scale,
 
   vtkSmartPointer<vtkRenderer> vtk_renderer = vtkRenderer::New();
   vtkSmartPointer<vtkRenderWindow> vtk_render_window = vtkRenderWindow::New();
+  vtkNew<vtkRenderWindowInteractor> vtk_window_interactor;
   vtk_render_window->AddRenderer(vtk_renderer);
+  vtk_window_interactor->SetRenderWindow(vtk_render_window);
+
 
   vtkSmartPointer<vtkGLTFImporter> importer = vtkGLTFImporter::New();
   const std::string file_directory =
@@ -619,6 +623,8 @@ void RenderEngineVtk::ImplementGltf(const std::string& file_name, double scale,
     importer->SetRenderWindow(vtk_render_window);
     importer->Update();
   }
+  vtk_render_window->Render();
+  vtk_window_interactor->Start();
 
   vtkActorCollection* actor_collection = vtk_renderer->GetActors();
   DRAKE_DEMAND(actor_collection->GetNumberOfItems() == kNumPipelines);
