@@ -166,6 +166,7 @@ drake_cc_library_ubuntu_only(
         ":internal_opengl_context",
     ],
     deps = [
+        "//common:unused",
         "//common:essential",
         "@tinyobjloader",
     ],

@@ -53,6 +53,7 @@
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging.h"
 #include "drake/geometry/drake_visualizer.h"
+#include "drake/geometry/render_gl/factory.h"
 #include "drake/geometry/render_gltf_client/factory.h"
 #include "drake/geometry/render_vtk/factory.h"
 #include "drake/geometry/scene_graph.h"
@@ -74,7 +75,7 @@ using drake::geometry::RenderEngineGltfClientParams;
 
 // TODO(jwnimmer-tri) This is way too much configuration data to parse using
 // gflags. Rewrite to use YAML input, instead.
-DEFINE_double(simulation_time, 10.0,
+DEFINE_double(simulation_time, 0.2,
               "Desired duration of the simulation in seconds.");
 DEFINE_bool(color, true, "Sets the enabled camera to render color");
 DEFINE_bool(depth, true, "Sets the enabled camera to render depth");
@@ -91,7 +92,7 @@ DEFINE_double(render_fps, 10, "Frames per simulation second to render");
    Diffuse: "0.0, 0.0, 0.0, 1.57, 3.14, 0.0"
    Textured: "0.0, 0.0, 0.0, -1.57, 0.0, 0.0"
  */
-DEFINE_string(camera_xyz_rpy, "0.8, 0.0, 0.5, -2.2, 0.0, 1.57",
+DEFINE_string(camera_xyz_rpy, "5.0, 0.0, 0.0, -1.57, 0.0, 1.57",
               "Sets the camera pose by xyz (meters) and rpy (radians) values.");
 DEFINE_string(
     save_dir, "",
@@ -112,6 +113,8 @@ static bool valid_render_engine(const char* flagname, const std::string& val) {
   if (val == "vtk")
     return true;
   else if (val == "client")
+    return true;
+  else if (val == "gl")
     return true;
   drake::log()->error("Invalid value for {}: '{}'; options: 'client' or 'vtk'.",
                       flagname, val);
@@ -190,6 +193,8 @@ int DoMain() {
   const std::string renderer_name("renderer");
   if (FLAGS_render_engine == "vtk") {
     scene_graph.AddRenderer(renderer_name, MakeRenderEngineVtk({}));
+  } else if (FLAGS_render_engine == "gl") {
+    scene_graph.AddRenderer(renderer_name, MakeRenderEngineGl({}));
   } else {  // FLAGS_render_engine == "client"
     RenderEngineGltfClientParams params;
     params.base_url = FLAGS_server_base_url;
@@ -205,7 +210,7 @@ int DoMain() {
   // difference in position.
   Parser parser{&plant};
   parser.AddModels(FindResourceOrThrow(
-      "drake/geometry/render_gltf_client/test/example_scene.sdf"));
+      "drake/geometry/render/test/meshes/box.obj"));
 
   DrakeLcm lcm;
   DrakeVisualizerd::AddToBuilder(&builder, scene_graph, &lcm);
@@ -292,14 +297,14 @@ int DoMain() {
 
   systems::Simulator<double> simulator(*diagram);
 
-  auto& context = static_cast<systems::DiagramContext<double>&>(
+  /* auto& context = static_cast<systems::DiagramContext<double>&>(
       simulator.get_mutable_context());
-  auto& plant_context = plant.GetMyMutableContextFromRoot(&context);
+  auto& plant_context = plant.GetMyMutableContextFromRoot(&context); */
 
   // Initialize the moving bottle's position and speed so we can observe motion.
   // The mustard bottle spins while climbing slightly.
   plant.mutable_gravity_field().set_gravity_vector({0, 0, 0});
-  const Body<double>& mustard_body = plant.GetBodyByName(
+  /* const Body<double>& mustard_body = plant.GetBodyByName(
       "base_link_mustard",
       plant.GetModelInstanceByName("example_scene::mustard_bottle"));
   const RigidTransformd X_WMustardBottle(RollPitchYawd{-M_PI / 2, 0, -M_PI / 2},
@@ -308,7 +313,7 @@ int DoMain() {
   const SpatialVelocity<double> V_WMustardBottle(Vector3d{0.6, 0, 0},
                                                  Vector3d{0, 0, 0.1});
   plant.SetFreeBodySpatialVelocity(&plant_context, mustard_body,
-                                   V_WMustardBottle);
+                                   V_WMustardBottle); */
   simulator.set_target_realtime_rate(1.f);
   simulator.AdvanceTo(FLAGS_simulation_time);
 

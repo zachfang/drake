@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
-#include <istream>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <string>
@@ -13,6 +13,7 @@
 #include <fmt/format.h>
 #include <tiny_obj_loader.h>
 
+#include "drake/common/unused.h"
 #include "drake/common/drake_assert.h"
 #include "drake/common/eigen_types.h"
 #include "drake/common/text_logging.h"
@@ -32,29 +33,38 @@ using std::vector;
 
 MeshData LoadMeshFromObj(std::istream* input_stream,
                          const std::string& filename) {
-  tinyobj::attrib_t attrib;
-  vector<tinyobj::shape_t> shapes;
-  vector<tinyobj::material_t> materials;
-  string warn;
-  string err;
-  /* This renderer assumes everything is triangles -- we rely on tinyobj to
-   triangulate for us. */
-  const bool do_tinyobj_triangulation = true;
+  tinyobj::ObjReaderConfig config;
+  config.triangulate = true;
+  config.vertex_color = false;
+  tinyobj::ObjReader reader;
+  reader.ParseFromFile(filename, config);
 
-  drake::log()->trace("LoadMeshFromObj('{}')", filename);
+  unused(input_stream);
 
-  /* Tinyobj doesn't infer the search directory from the directory containing
-   the obj file. We have to provide that directory; of course, this assumes
-   that the material library reference is relative to the obj directory.
-   Ignore material-library file.  */
-  tinyobj::MaterialReader* material_reader = nullptr;
-  const bool ret =
-      tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, input_stream,
-                       material_reader, do_tinyobj_triangulation);
-  if (!ret) {
-    throw std::runtime_error(
-        fmt::format("tinyobj::LoadObj failed to load file: {}", filename));
+  if (!reader.Valid()) {
+    throw std::runtime_error(fmt::format("This is bad! {}", reader.Error()));
   }
+
+  const auto& shapes = reader.GetShapes();
+  if (shapes.size() != 1) {
+    throw std::runtime_error(fmt::format(
+        "Only one shape with one material; found {} shapes", shapes.size()));
+  }
+
+  const auto& materials = reader.GetMaterials();
+  if (materials.size() > 1) {
+    throw std::runtime_error(fmt::format(
+        "No more than one material definition supported: found {} materials",
+        materials.size()));
+  }
+
+  std::cout << materials.size() << std::endl;
+  std::cout << materials[0].name << std::endl;
+    std::cout << materials[0].diffuse_texname << std::endl;
+      std::cout << materials[0].ambient_texname << std::endl;
+
+
+  const auto& attrib = reader.GetAttrib();
 
   if (shapes.empty()) {
     throw std::runtime_error(fmt::format(
