@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<sdf version="1.7" xmlns:drake="drake.mit.edu">
+  <model name="ur3e">
+    <link name="ur_shoulder_link">
+      <visual name="ur_shoulder_link">
+        <pose>0.0 0.0 0.152 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>shoulder.obj</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material> <!-- Use referenced .mtl file with a different name. -->
+            <diffuse>0.0 1.0 0.0 1</diffuse>
+          </material>
+      </visual>
+      <inertial>
+        <pose>0 0.0006 0.0004 0 0 0</pose>
+        <mass>1.8</mass>
+        <inertia>
+          <ixx>0.0049</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0047</iyy>
+          <iyz>0</iyz>
+          <izz>0.0036</izz>
+        </inertia>
+      </inertial>
+    </link>
+  </model>
+</sdf>
