@@ -74,7 +74,7 @@ using drake::geometry::RenderEngineGltfClientParams;
 
 // TODO(jwnimmer-tri) This is way too much configuration data to parse using
 // gflags. Rewrite to use YAML input, instead.
-DEFINE_double(simulation_time, 10.0,
+DEFINE_double(simulation_time, 0.3,
               "Desired duration of the simulation in seconds.");
 DEFINE_bool(color, true, "Sets the enabled camera to render color");
 DEFINE_bool(depth, true, "Sets the enabled camera to render depth");
@@ -91,7 +91,7 @@ DEFINE_double(render_fps, 10, "Frames per simulation second to render");
    Diffuse: "0.0, 0.0, 0.0, 1.57, 3.14, 0.0"
    Textured: "0.0, 0.0, 0.0, -1.57, 0.0, 0.0"
  */
-DEFINE_string(camera_xyz_rpy, "0.8, 0.0, 0.5, -2.2, 0.0, 1.57",
+DEFINE_string(camera_xyz_rpy, "0.3, 0.0, 0.2, -2.1, 0.0, 1.57",
               "Sets the camera pose by xyz (meters) and rpy (radians) values.");
 DEFINE_string(
     save_dir, "",
@@ -261,15 +261,15 @@ int DoMain() {
 
   if (FLAGS_depth) {
     const auto& port =
-        image_to_lcm_image_array->DeclareImageInputPort<PixelType::kDepth32F>(
+        image_to_lcm_image_array->DeclareImageInputPort<PixelType::kDepth16U>(
             "depth");
-    builder.Connect(camera->depth_image_32F_output_port(), port);
+    builder.Connect(camera->depth_image_16U_output_port(), port);
 
     if (save_images) {
       const auto& writer_port =
-          image_writer->DeclareImageInputPort<PixelType::kDepth32F>(
+          image_writer->DeclareImageInputPort<PixelType::kDepth16U>(
               "depth", filename, image_publish_period, 0.);
-      builder.Connect(camera->depth_image_32F_output_port(), writer_port);
+      builder.Connect(camera->depth_image_16U_output_port(), writer_port);
     }
   }
 
@@ -291,24 +291,23 @@ int DoMain() {
   auto diagram = builder.Build();
 
   systems::Simulator<double> simulator(*diagram);
+  plant.mutable_gravity_field().set_gravity_vector({0, 0, 0});
 
-  auto& context = static_cast<systems::DiagramContext<double>&>(
+  /* auto& context = static_cast<systems::DiagramContext<double>&>(
       simulator.get_mutable_context());
   auto& plant_context = plant.GetMyMutableContextFromRoot(&context);
 
   // Initialize the moving bottle's position and speed so we can observe motion.
   // The mustard bottle spins while climbing slightly.
-  plant.mutable_gravity_field().set_gravity_vector({0, 0, 0});
   const Body<double>& mustard_body = plant.GetBodyByName(
-      "base_link_mustard",
-      plant.GetModelInstanceByName("example_scene::mustard_bottle"));
-  const RigidTransformd X_WMustardBottle(RollPitchYawd{-M_PI / 2, 0, -M_PI / 2},
-                                         Vector3d(0, 0, 0));
+      "textured_sphere");
+  const RigidTransformd X_WMustardBottle(RollPitchYawd{0, 0, 0},
+                                         Vector3d(0, 0, 0.3));
   plant.SetFreeBodyPose(&plant_context, mustard_body, X_WMustardBottle);
-  const SpatialVelocity<double> V_WMustardBottle(Vector3d{0.6, 0, 0},
-                                                 Vector3d{0, 0, 0.1});
+  const SpatialVelocity<double> V_WMustardBottle(Vector3d{0.5, 0, 0},
+                                                 Vector3d{0, 0, -0.5});
   plant.SetFreeBodySpatialVelocity(&plant_context, mustard_body,
-                                   V_WMustardBottle);
+                                   V_WMustardBottle); */
   simulator.set_target_realtime_rate(1.f);
   simulator.AdvanceTo(FLAGS_simulation_time);
 

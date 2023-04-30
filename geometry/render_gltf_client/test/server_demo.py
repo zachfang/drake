@@ -45,7 +45,7 @@ RENDER_ENDPOINT = "/render"
 purposes, set this to `False` to prevent the deletion of scene files / rendered
 images.  See also: `delete_server_cache()`.
 """
-CLEANUP = True
+CLEANUP = False
 
 
 """Where to store data files during the execution of the program."""
