@@ -280,6 +280,7 @@ int DoMain() {
      RenderEngine::GetColorDFromLabel(RenderLabel::kEmpty) would produce.  If
      that value changes, this should change to match. */
     renderer->SetBackground(254.0 / 255.0, 127.0 / 255.0, 0.0);
+    renderer->SetBackgroundAlpha(1.0);
 
     // Same as RenderEngineVtk, label actors have lighting disabled.  Labels
     // have already been encoded as geometry materials in the glTF.  By

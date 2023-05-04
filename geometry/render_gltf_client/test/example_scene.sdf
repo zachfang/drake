@@ -24,7 +24,7 @@
           </box>
         </geometry>
         <material>
-          <drake:diffuse_map>4_color_texture.png</drake:diffuse_map>
+          <diffuse>0.25 1.0 0.25 1.0</diffuse>
         </material>
       </visual>
     </link>
