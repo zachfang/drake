@@ -64,12 +64,12 @@ class LcmImageArrayHandler:
 
     def __init__(self, host, port, channel):
         # Pending image files to be sent to the server.
-        self._latest_image = None
-        self._last_update_time = time.time() 
+        self._latest_message = None
+        self._last_update_time = time.time()
 
         # Subscribe to the channel.
         self._lcm = DrakeLcm()
-        self._lcm.Subscribe(channel=channel, handler=self.on_image_array)
+        self._lcm.Subscribe(channel=channel, handler=self._update_mesage)
 
         # Instantiate an `_ImageServer` and run it.
         self._image_server = _ImageServer(image_generator=self.image_generator)
@@ -80,33 +80,27 @@ class LcmImageArrayHandler:
     def image_generator(self):
         while True:
             self._lcm.HandleSubscriptions(timeout_millis=1000)
-            if self._latest_image:
+            if self._latest_message is not None:
+                new_image = self._process_message()
+                self._latest_message = None
                 yield (
                     b"--frame\r\n"
                     b"Content-Type: image/png\r\n\r\n"
-                    + self._latest_image
+                    + new_image
                     + b"\r\n"
                 )
 
-    def _should_update(self):
-        now = time.time()
-        update_period = 0.1  # 10 Hz
-        remaining = update_period - (now - self._last_update_time)
-        if remaining > 0.0:
-            return False
-        else:
-            self._last_update_time = now
-            return True
+    def _update_mesage(self, message):
+        self._latest_message = message
 
-    def on_image_array(self, data):
-        """Converts `lcmt_image_array` to image files and stores them in a
-        deque. Note that only a subset of `lcmt_image` types are supported.
+    def _process_message(self):
+        """Update this. Note that only a subset of `lcmt_image` types are
+        supported.
         """
-        if not self._should_update():
-            return
+        image_array = lcmt_image_array.decode(self._latest_message)
+        assert len(image_array.images) > 0
 
-        message = lcmt_image_array.decode(data)
-        for image in message.images:
+        for image in image_array.images:
             w = image.width
             h = image.height
 
@@ -140,7 +134,7 @@ class LcmImageArrayHandler:
             buffer = BytesIO()
             pil_image = Image.frombuffer("RGBA", (w, h), data_bytes)
             pil_image.save(buffer, format="png")
-            self._latest_image = buffer.getbuffer()
+            return buffer.getbuffer()
 
 
 def main():
