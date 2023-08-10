@@ -2,10 +2,7 @@ import subprocess
 
 from bazel_tools.tools.python.runfiles.runfiles import Create as CreateRunfiles
 
-from pydrake.lcm import (
-    DrakeLcm,
-)
-
+from pydrake.lcm import DrakeLcm
 
 lcm = DrakeLcm()
 lcm_url = lcm.get_lcm_url()
@@ -19,6 +16,7 @@ handler_bin = runfiles.Rlocation(
     "drake/bindings/pydrake/visualization/lcm_image_array_viewer"
 )
 
+
 # Spawn up a subprocess whenever a new lcmt_image_array channel is discovered.
 def on_message(channel, data):
     if channel not in image_channels:
@@ -27,17 +25,17 @@ def on_message(channel, data):
             handler_bin,
             "--host=127.0.0.1",
             "--port=0",
-            f"--channel={channel}"
+            f"--channel={channel}",
         ]
         print(run_args)
         subprocess.Popen(run_args)
         image_channels.add(channel)
         print("Completed!")
 
+
 # Below acts as the fake Meldis.
 lcm.SubscribeMultichannel(
-    regex="DRAKE_RGBD_CAMERA_IMAGES.*",
-    handler=on_message
+    regex="DRAKE_RGBD_CAMERA_IMAGES.*", handler=on_message
 )
 
 while True:

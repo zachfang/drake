@@ -84,8 +84,8 @@ drake_py_binary(
 drake_py_binary(
     name = "fake_meldis",
     srcs = ["fake_meldis.py"],
-    visibility = ["//tools:__pkg__"],
     data = [":lcm_image_array_viewer"],
+    visibility = ["//tools:__pkg__"],
     deps = [
         ":visualization",
         "@bazel_tools//tools/python/runfiles",

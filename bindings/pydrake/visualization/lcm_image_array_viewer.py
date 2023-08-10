@@ -1,5 +1,5 @@
 import argparse
-from io import BytesIO 
+from io import BytesIO
 import tempfile
 import threading
 import time
@@ -9,23 +9,11 @@ from flask import Flask, Response
 import numpy as np
 from PIL import Image
 
-from drake import (
-    lcmt_image,
-    lcmt_image_array,
-)
-from pydrake.lcm import (
-    DrakeLcm,
-)
-from pydrake.visualization import (
-    ColorizeDepthImage,
-    ColorizeLabelImage,
-)
+from drake import lcmt_image, lcmt_image_array
+from pydrake.lcm import DrakeLcm
+from pydrake.systems.sensors import ImageDepth32F, ImageLabel16I, ImageRgba8U
+from pydrake.visualization import ColorizeDepthImage, ColorizeLabelImage
 
-from pydrake.systems.sensors import (
-    ImageDepth32F,
-    ImageLabel16I,
-    ImageRgba8U,
-)
 
 class _ImageServer(Flask):
     """Streams images via the HTTP protocol given an image source. The image
@@ -84,7 +72,7 @@ class LcmImageArrayViewer:
         # Instantiate an `_ImageServer` and run it.
         self._image_server = _ImageServer(image_generator=self.image_generator)
         self._image_server.run(
-                host=host, port=port, debug=False, threaded=False
+            host=host, port=port, debug=False, threaded=False
         )
 
     def image_generator(self):
@@ -96,9 +84,7 @@ class LcmImageArrayViewer:
                 time.sleep(1.0)
                 yield (
                     b"--frame\r\n"
-                    b"Content-Type: image/png\r\n\r\n"
-                    + new_image
-                    + b"\r\n"
+                    b"Content-Type: image/png\r\n\r\n" + new_image + b"\r\n"
                 )
 
     def _update_message(self, message):
@@ -160,7 +146,9 @@ class LcmImageArrayViewer:
             rgba_images.append(rgba)
 
         if len(rgba_images) > 1:
-            display_image = np.concatenate([img.data for img in rgba_images], axis=1)
+            display_image = np.concatenate(
+                [img.data for img in rgba_images], axis=1
+            )
         else:
             display_image = rgba_images[0].data
 
@@ -172,7 +160,9 @@ class LcmImageArrayViewer:
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+    )
     parser.add_argument(
         "--host",
         type=str,
@@ -199,5 +189,6 @@ def main():
         args.host, args.port, args.channel
     )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
