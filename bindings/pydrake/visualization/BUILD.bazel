@@ -82,10 +82,10 @@ drake_py_binary(
 )
 
 drake_py_binary(
-    name = "lcm_image_viewer",
-    srcs = ["lcm_image_viewer.py"],
+    name = "fake_meldis",
+    srcs = ["fake_meldis.py"],
     visibility = ["//tools:__pkg__"],
-    data = [":image_array_handler"],
+    data = [":lcm_image_array_viewer"],
     deps = [
         ":visualization",
         "@bazel_tools//tools/python/runfiles",
@@ -93,8 +93,8 @@ drake_py_binary(
 )
 
 drake_py_binary(
-    name = "image_array_handler",
-    srcs = ["image_array_handler.py"],
+    name = "lcm_image_array_viewer",
+    srcs = ["lcm_image_array_viewer.py"],
     visibility = ["//tools:__pkg__"],
     deps = [":visualization"],
 )

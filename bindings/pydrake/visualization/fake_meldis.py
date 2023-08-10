@@ -16,7 +16,7 @@ image_channels = set()
 
 runfiles = CreateRunfiles()
 handler_bin = runfiles.Rlocation(
-    "drake/bindings/pydrake/visualization/image_array_handler"
+    "drake/bindings/pydrake/visualization/lcm_image_array_viewer"
 )
 
 # Spawn up a subprocess whenever a new lcmt_image_array channel is discovered.

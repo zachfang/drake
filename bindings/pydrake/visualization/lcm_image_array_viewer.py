@@ -16,6 +16,16 @@ from drake import (
 from pydrake.lcm import (
     DrakeLcm,
 )
+from pydrake.visualization import (
+    ColorizeDepthImage,
+    ColorizeLabelImage,
+)
+
+from pydrake.systems.sensors import (
+    ImageDepth32F,
+    ImageLabel16I,
+    ImageRgba8U,
+)
 
 class _ImageServer(Flask):
     """Streams images via the HTTP protocol given an image source. The image
@@ -36,19 +46,16 @@ class _ImageServer(Flask):
         )
 
 
-class LcmImageArrayHandler:
-    """Displays LCM images in another URL that has the same host IP but a
-    different port number.
-
-    It listens to `lcmt_image_arry` messages, processes them to image files,
-    and store the images to a queue. A flask server, _ImageServer, grabs images
-    when available and broadcasts them to the URL for visualization.
+class LcmImageArrayViewer:
+    """Displays LCM images to an URL. The program waits for `lcmt_image_arry`
+    messages from a particular channel and processes them to image files. It
+    contains a flask server, _ImageServer, that grabs images whenever available
+    and broadcasts them to an URL for visualization.
     """
 
     _IMAGE_DATA_TYPE = {
-        lcmt_image.CHANNEL_TYPE_INT16: np.int16,
         lcmt_image.CHANNEL_TYPE_UINT8: np.uint8,
-        lcmt_image.CHANNEL_TYPE_UINT16: np.uint16,
+        lcmt_image.CHANNEL_TYPE_INT16: np.int16,
         lcmt_image.CHANNEL_TYPE_FLOAT32: np.float32,
     }
     """The mapping from `lcmt_image` channel_type enum to numpy data type."""
@@ -63,13 +70,16 @@ class LcmImageArrayHandler:
     """
 
     def __init__(self, host, port, channel):
-        # Pending image files to be sent to the server.
+        # Only the latest message from LCM is kept.
         self._latest_message = None
-        self._last_update_time = time.time()
 
         # Subscribe to the channel.
         self._lcm = DrakeLcm()
-        self._lcm.Subscribe(channel=channel, handler=self._update_mesage)
+        self._lcm.Subscribe(channel=channel, handler=self._update_message)
+
+        # Helpers to convert images to aid visualization.
+        self._colorized_label = ColorizeLabelImage()
+        self._colorized_depth = ColorizeDepthImage()
 
         # Instantiate an `_ImageServer` and run it.
         self._image_server = _ImageServer(image_generator=self.image_generator)
@@ -83,6 +93,7 @@ class LcmImageArrayHandler:
             if self._latest_message is not None:
                 new_image = self._process_message()
                 self._latest_message = None
+                time.sleep(1.0)
                 yield (
                     b"--frame\r\n"
                     b"Content-Type: image/png\r\n\r\n"
@@ -90,16 +101,18 @@ class LcmImageArrayHandler:
                     + b"\r\n"
                 )
 
-    def _update_mesage(self, message):
+    def _update_message(self, message):
         self._latest_message = message
 
     def _process_message(self):
-        """Update this. Note that only a subset of `lcmt_image` types are
-        supported.
+        """Processes the latest lcmt_image_array message into a PNG image. If
+        the message contains multiple lcmt_image images, they will be
+        concatenated together.
         """
         image_array = lcmt_image_array.decode(self._latest_message)
         assert len(image_array.images) > 0
 
+        rgba_images = []
         for image in image_array.images:
             w = image.width
             h = image.height
@@ -130,11 +143,32 @@ class LcmImageArrayHandler:
                     f"Unsupported compression type:{image.compression_method}"
                 )
 
-            # Update the image for display in memory.
-            buffer = BytesIO()
-            pil_image = Image.frombuffer("RGBA", (w, h), data_bytes)
-            pil_image.save(buffer, format="png")
-            return buffer.getbuffer()
+            # Convert bytes to np.array for colorization or concatenation.
+            np_image_data = np.frombuffer(data_bytes, dtype=data_type)
+
+            rgba = ImageRgba8U(w, h, 4)
+            if image.pixel_format == lcmt_image.PIXEL_FORMAT_RGBA:
+                rgba.mutable_data[:] = np_image_data.reshape(h, w, 4)
+            elif image.pixel_format == lcmt_image.PIXEL_FORMAT_LABEL:
+                label = ImageLabel16I(w, h, 1)
+                label.mutable_data[:] = np_image_data.reshape(h, w, 1)
+                self._colorized_label._colorize_label_image(label, rgba)
+            elif image.pixel_format == lcmt_image.PIXEL_FORMAT_DEPTH:
+                depth = ImageDepth32F(w, h, 1)
+                depth.mutable_data[:] = np_image_data.reshape(h, w, 1)
+                self._colorized_depth._colorize_depth_image(depth, rgba)
+            rgba_images.append(rgba)
+
+        if len(rgba_images) > 1:
+            display_image = np.concatenate([img.data for img in rgba_images], axis=1)
+        else:
+            display_image = rgba_images[0].data
+
+        # Update the image for display in memory.
+        pil_image = Image.fromarray(display_image.astype("uint8"))
+        buffer = BytesIO()
+        pil_image.save(buffer, format="png")
+        return buffer.getbuffer()
 
 
 def main():
@@ -161,7 +195,7 @@ def main():
     )
     args = parser.parse_args()
 
-    image_array_handler = LcmImageArrayHandler(
+    image_array_viewer = LcmImageArrayViewer(
         args.host, args.port, args.channel
     )
 
