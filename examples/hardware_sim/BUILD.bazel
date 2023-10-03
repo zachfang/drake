@@ -162,10 +162,8 @@ drake_py_binary(
 
 drake_py_unittest(
     name = "robot_commander_test",
-    allow_network = ["lcm:meshcat"],
     data = [
         ":example_scenarios.yaml",
-        ":robot_commander",
     ],
     deps = [
         ":robot_commander",

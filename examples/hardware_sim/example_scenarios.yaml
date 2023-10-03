@@ -25,7 +25,7 @@ Demo:
       name: iiwa_on_world
       X_PF:
         base_frame: world
-        translation: [0, -1.0, 0]
+        translation: [0, -0.7, 0.1]
         rotation: !Rpy { deg: [0, 0, 90] }
   - add_weld:
       parent: iiwa_on_world
@@ -48,7 +48,7 @@ Demo:
   lcm_buses:
     driver_traffic:
       # Use a non-default LCM url to communicate with the robot.
-      lcm_url: udpm://239.255.2.1:6776?ttl=0
+      lcm_url: udpm://239.241.129.92:20185?ttl=0
   cameras:
     oracular_view:
       name: camera_0
