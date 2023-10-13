@@ -1,5 +1,4 @@
 import copy
-from dataclasses import dataclass
 import hashlib
 import logging
 from pathlib import Path
@@ -7,7 +6,6 @@ import re
 import subprocess
 import sys
 import time
-import webbrowser
 
 from bazel_tools.tools.python.runfiles.runfiles import Create as CreateRunfiles
 import numpy as np
@@ -654,14 +652,6 @@ class _DrawFrameApplet:
                                                   message.quaternion[i]))
 
 
-@dataclass
-class ImageArrayViewer:
-    channel: str
-    host: str
-    port: int
-    button_clicks: int = 0
-
-
 class _ImageArrayApplet:
     """Displays LCM images in different browser tabs alongside Meldis. Each LCM
     channel will have its own tab concatenating all the images in the
@@ -686,43 +676,18 @@ class _ImageArrayApplet:
         is clicked.
         """
         if channel not in self._image_array_channels:
-            self._meshcat.AddButton(channel)
             self._image_array_channels.add(channel)
-            self._image_array_viewers.append(
-                ImageArrayViewer(
-                    channel=channel,
-                    # TODO(zachfang): Remove the hard-coded host address.
-                    host="127.0.0.1",
-                    port=self._port,
-                    button_clicks=0,
-                )
+            _logger.info(
+                f"Visualize {channel} images at http://localhost:{self._port}"
             )
-            self._port += 1
-
-    def on_poll(self):
-        """Checks whether any button is clicked and an associated tab should be
-        launched for visualization.
-        """
-        for viewer in self._image_array_viewers:
-            updated_clicks = self._meshcat.GetButtonClicks(viewer.channel)
-            if updated_clicks > viewer.button_clicks:
-                # Only start a new subprocess if it hasn't been clicked before.
-                self._start_image_viewer(
-                    viewer=viewer,
-                    start_new_porcess=(viewer.button_clicks == 0),
-                )
-                viewer.button_clicks = updated_clicks
-
-    def _start_image_viewer(self, viewer, start_new_porcess):
-        if start_new_porcess:
             run_args = [
                 self._viewer_bin,
-                f"--host={viewer.host}",
-                f"--port={viewer.port}",
-                f"--channel={viewer.channel}",
+                "--host=127.0.0.1",
+                f"--port={self._port}",
+                f"--channel={channel}",
             ]
             subprocess.Popen(run_args)
-        webbrowser.open(url=f"{viewer.host}:{viewer.port}", new=True)
+            self._port += 1
 
 
 class Meldis:
@@ -841,7 +806,6 @@ class Meldis:
         self._subscribe_multichannel(regex="DRAKE_RGBD_CAMERA_IMAGES.*",
                                      message_type=lcmt_image_array,
                                      handler=image_array.on_image_array)
-        self._poll(handler=image_array.on_poll)
 
         # Bookkeeping for automatic shutdown.
         self._last_poll = None
