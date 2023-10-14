@@ -69,7 +69,10 @@ drake_pybind_library(
 drake_py_binary(
     name = "meldis",
     srcs = ["meldis.py"],
-    data = [":lcm_image_array_viewer"],
+    data = [
+        ":lcm_image_array_main_page",
+        ":lcm_image_array_viewer",
+    ],
     visibility = ["//tools:__pkg__"],
     deps = [
         ":visualization",
@@ -88,6 +91,12 @@ drake_py_binary(
 drake_py_binary(
     name = "lcm_image_array_viewer",
     srcs = ["_lcm_image_array_viewer.py"],
+    deps = [":visualization"],
+)
+
+drake_py_binary(
+    name = "lcm_image_array_main_page",
+    srcs = ["_lcm_image_array_main_page.py"],
     deps = [":visualization"],
 )
 
